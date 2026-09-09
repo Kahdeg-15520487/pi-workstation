@@ -1,0 +1,8 @@
+node_modules/
+.codex
+.pi/
+.omo/
+.reasonix/
+artifacts/
+comic/
+nul

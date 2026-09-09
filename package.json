@@ -1,0 +1,32 @@
+{
+  "name": "pi-workstation",
+  "version": "0.1.0",
+  "description": "Advanced extension suite for pi-coding-agent, providing agentic harness and HUD dashboard.",
+  "keywords": [
+    "pi-package"
+  ],
+  "author": "Kahdeg-15520487",
+  "license": "MIT",
+  "pi": {
+    "extensions": [
+      "extensions/agentic-harness/index.ts",
+      "extensions/workspace-memory/index.ts",
+      "extensions/pi-code-previews/index.ts"
+    ]
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.49",
+    "diff": "^8.0.4",
+    "shiki": "^4.0.2",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/turndown": "^5.0.6"
+  },
+  "trustedDependencies": [
+    "@google/genai",
+    "koffi",
+    "protobufjs"
+  ]
+}
