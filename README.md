@@ -1,6 +1,6 @@
 # pi-workstation
 
-Extension suite for the [pi coding agent](https://github.com/badlogic/pi-mono): progress tracking, workspace memory, and readable tool output. All code is plain TypeScript/Markdown in this repository.
+Extension suite for the [pi coding agent](https://github.com/earendil-works/pi): progress tracking, workspace memory, and readable tool output. All code is plain TypeScript/Markdown in this repository.
 
 ## Extensions
 

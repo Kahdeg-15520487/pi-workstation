@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { visibleWidth, type EditorComponent } from "@mariozechner/pi-tui";
+import { visibleWidth, type EditorComponent } from "@earendil-works/pi-tui";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
   CustomEditor: class MockCustomEditor {
     borderColor = (text: string) => text;
     handleInput = vi.fn();

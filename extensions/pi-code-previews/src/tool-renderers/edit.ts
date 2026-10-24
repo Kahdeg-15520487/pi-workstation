@@ -1,6 +1,6 @@
-import type { ExtensionAPI, Theme } from "@mariozechner/pi-coding-agent";
-import { createEditToolDefinition, getLanguageFromPath } from "@mariozechner/pi-coding-agent";
-import { Container, Text, type Component } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+import { createEditToolDefinition, getLanguageFromPath } from "@earendil-works/pi-coding-agent";
+import { Container, Text, type Component } from "@earendil-works/pi-tui";
 import { AsyncPreview, shouldRenderAsync } from "../async-preview.ts";
 import { getEditDiff, getObjectValue, getPathArg, getTextContent } from "../data.ts";
 import {

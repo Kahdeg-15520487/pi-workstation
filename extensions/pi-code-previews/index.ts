@@ -1,6 +1,11 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { getSettingsListTheme } from "@mariozechner/pi-coding-agent";
-import { SettingsList, truncateToWidth, visibleWidth, type Component } from "@mariozechner/pi-tui";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
+import {
+  SettingsList,
+  truncateToWidth,
+  visibleWidth,
+  type Component,
+} from "@earendil-works/pi-tui";
 import { registerToolRenderers } from "./src/renderers.ts";
 import { getSettingsPath, loadSettingsFromDisk, saveSettingsToDisk } from "./src/settings-store.ts";
 import { createSettingsItems } from "./src/settings-ui.ts";

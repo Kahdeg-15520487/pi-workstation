@@ -1,5 +1,5 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import { WorkstationFooter, type CacheStats, type ActiveTools, type ActiveToolStatus } from "./footer.js";
 import { resolveAgenticUiSettings } from "./ui-settings.js";
 import { shimmerText, type ShimmerPalette } from "./shimmer.js";
@@ -12,8 +12,8 @@ import { fileURLToPath } from "url";
 import { renderWebfetchCall, renderWebfetchResult } from "./webfetch/render.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { microcompactMessages, getCompactionPrompt, formatCompactSummary } from "./compaction.js";
-import { convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
-import { complete } from "@mariozechner/pi-ai";
+import { convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
+import { complete } from "@earendil-works/pi-ai/compat";
 import {
   defaultHarnessStateRoot,
   harnessStateSnapshotPath,

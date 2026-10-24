@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ToolInfo } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ToolInfo } from "@earendil-works/pi-coding-agent";
 import { registerBash } from "./tool-renderers/bash.ts";
 import { registerEdit } from "./tool-renderers/edit.ts";
 import { registerFind } from "./tool-renderers/find.ts";

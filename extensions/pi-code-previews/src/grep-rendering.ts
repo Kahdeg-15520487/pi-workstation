@@ -1,5 +1,5 @@
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import { getLanguageFromPath } from "@mariozechner/pi-coding-agent";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import { getLanguageFromPath } from "@earendil-works/pi-coding-agent";
 import { resolvePreviewLanguage } from "./language.ts";
 import { renderHighlightedText } from "./shiki.ts";
 import { escapeControlChars } from "./terminal-text.ts";

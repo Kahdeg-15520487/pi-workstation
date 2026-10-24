@@ -1,5 +1,5 @@
-import type { AppKeybinding, Theme } from "@mariozechner/pi-coding-agent";
-import { getKeybindings } from "@mariozechner/pi-tui";
+import type { AppKeybinding, Theme } from "@earendil-works/pi-coding-agent";
+import { getKeybindings } from "@earendil-works/pi-tui";
 
 export type PreviewLineEntry<T> =
   | { kind: "line"; line: T; index: number }

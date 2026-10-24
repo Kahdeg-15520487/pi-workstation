@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { beforeEach, afterAll, describe, it, expect, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
   createBashTool: vi.fn(() => ({
     name: "bash",
     label: "bash",
@@ -19,13 +19,13 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
   convertToLlm: vi.fn((x: unknown) => x),
 }));
 
-vi.mock("@mariozechner/pi-tui", () => ({
+vi.mock("@earendil-works/pi-tui", () => ({
   Text: class MockText {},
   truncateToWidth: (text: string, width?: number) => typeof width === "number" ? text.slice(0, width) : text,
   visibleWidth: (text: string) => text.replace(/\x1b\[[0-9;]*m/g, "").length,
 }));
 
-vi.mock("@mariozechner/pi-ai", () => ({
+vi.mock("@earendil-works/pi-ai", () => ({
   complete: vi.fn(),
 }));
 

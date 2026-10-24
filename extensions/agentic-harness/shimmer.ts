@@ -1,4 +1,4 @@
-import type { Theme, ThemeColor } from "@mariozechner/pi-coding-agent";
+import type { Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
 
 const CLASSIC_PADDING = 10;
 export const SHIMMER_SWEEP_MS = 1400;

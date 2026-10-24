@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
   keyHint: (key: string, description?: string) => `${key}${description ? ` ${description}` : ""}`,
   keyText: (key: string) => key,
   rawKeyHint: (key: string, description?: string) => `${key}${description ? ` ${description}` : ""}`,

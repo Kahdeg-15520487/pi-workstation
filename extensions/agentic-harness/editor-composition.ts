@@ -1,5 +1,5 @@
-import { CustomEditor } from "@mariozechner/pi-coding-agent";
-import { matchesKey, truncateToWidth, type EditorComponent, type EditorTheme, type TUI } from "@mariozechner/pi-tui";
+import { CustomEditor } from "@earendil-works/pi-coding-agent";
+import { matchesKey, truncateToWidth, type EditorComponent, type EditorTheme, type TUI } from "@earendil-works/pi-tui";
 import {
   clearEditorText,
   defaultEditorStash,

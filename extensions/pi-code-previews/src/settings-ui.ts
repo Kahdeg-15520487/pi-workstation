@@ -1,4 +1,4 @@
-import { getSelectListTheme, getSettingsListTheme } from "@mariozechner/pi-coding-agent";
+import { getSelectListTheme, getSettingsListTheme } from "@earendil-works/pi-coding-agent";
 import {
   Container,
   SelectList,
@@ -7,7 +7,7 @@ import {
   Text,
   type SelectItem,
   type SettingItem,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { bundledThemes } from "shiki";
 import { getSettingsPath } from "./settings-store.ts";
 import type { CodePreviewSettings } from "./settings.ts";

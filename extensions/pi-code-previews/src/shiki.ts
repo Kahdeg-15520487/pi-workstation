@@ -1,5 +1,5 @@
 /* eslint-disable no-control-regex */
-import type { Theme } from "@mariozechner/pi-coding-agent";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import { bundledThemesInfo, createHighlighter } from "shiki";
 import { hashString } from "./hash.ts";
 import { setCodePreviewSettings, codePreviewSettings } from "./settings.ts";

@@ -2,9 +2,9 @@
  * Custom TUI rendering for the webfetch tool.
  */
 
-import { type Theme } from "@mariozechner/pi-coding-agent";
-import { Text, Container, Spacer } from "@mariozechner/pi-tui";
-import type { Component } from "@mariozechner/pi-tui";
+import { type Theme } from "@earendil-works/pi-coding-agent";
+import { Text, Container, Spacer } from "@earendil-works/pi-tui";
+import type { Component } from "@earendil-works/pi-tui";
 import type { WebFetchDetails } from "./types.js";
 
 function formatBytes(bytes: number): string {

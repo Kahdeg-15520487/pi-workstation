@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { visibleWidth } from "@mariozechner/pi-tui";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import { visibleWidth } from "@earendil-works/pi-tui";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { ICONS, ICONS_PLAIN, WorkstationFooter, setUseNerdIcons } from "../footer.js";
 import { setCurrentTodos, type SimpleTodoItem } from "../simple-todo.js";
 import type { FooterGlyphMode } from "../ui-settings.js";

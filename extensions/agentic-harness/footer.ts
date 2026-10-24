@@ -1,6 +1,6 @@
-import { truncateToWidth, visibleWidth, type Component, type TUI } from "@mariozechner/pi-tui";
-import type { Theme, ThemeColor } from "@mariozechner/pi-coding-agent";
-import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
+import { truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
+import type { Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
+import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { basename } from "path";
 import { PLAN_PROGRESS_SPINNER_MS } from "./harness-progress.js";
 import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";

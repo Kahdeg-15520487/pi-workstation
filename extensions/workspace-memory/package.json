@@ -6,9 +6,9 @@
     "test": "vitest run",
     "build": "tsc --noEmit"
   },
-  "dependencies": {
-    "@mariozechner/pi-coding-agent": "^0.72.1",
-    "@sinclair/typebox": "^0.34.49"
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

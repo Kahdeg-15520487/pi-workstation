@@ -1,6 +1,6 @@
 # Pi Agentic Harness
 
-An extension for the [pi coding agent](https://github.com/badlogic/pi-mono) focused on progress tracking, structured state, and editor/powerline UI chrome.
+An extension for the [pi coding agent](https://github.com/earendil-works/pi) focused on progress tracking, structured state, and editor/powerline UI chrome.
 
 ## Features
 

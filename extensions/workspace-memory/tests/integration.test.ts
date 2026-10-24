@@ -6,11 +6,11 @@ import workspaceMemoryExtension from "../index.js";
 import { invalidateCache } from "../storage.js";
 import { MAX_RECALL_CONTEXT_CHARS } from "../recall.js";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
 	getAgentDir: vi.fn(),
 }));
 
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 const mockedGetAgentDir = vi.mocked(getAgentDir);
 const tempRoots: string[] = [];

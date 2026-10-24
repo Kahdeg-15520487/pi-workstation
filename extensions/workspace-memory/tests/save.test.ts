@@ -5,11 +5,11 @@ import { tmpdir } from 'os';
 import { createAndSaveMemory } from '../save.js';
 import { getCachedIndex, invalidateCache } from '../storage.js';
 
-vi.mock('@mariozechner/pi-coding-agent', () => ({
+vi.mock('@earendil-works/pi-coding-agent', () => ({
   getAgentDir: vi.fn(),
 }));
 
-import { getAgentDir } from '@mariozechner/pi-coding-agent';
+import { getAgentDir } from '@earendil-works/pi-coding-agent';
 
 const mockedGetAgentDir = vi.mocked(getAgentDir);
 

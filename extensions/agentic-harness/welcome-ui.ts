@@ -1,7 +1,7 @@
-import type { Component, TUI } from "@mariozechner/pi-tui";
-import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@mariozechner/pi-coding-agent";
-import { keyHint, keyText, rawKeyHint } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import type { Component, TUI } from "@earendil-works/pi-tui";
+import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
+import { keyHint, keyText, rawKeyHint } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { SHIMMER_SWEEP_MS } from "./shimmer.js";
 
 export type HeaderFactory = (tui: TUI, theme: Theme) => Component & { dispose?(): void };

@@ -1,5 +1,5 @@
-import { Text, type Component } from "@mariozechner/pi-tui";
-import type { Theme } from "@mariozechner/pi-coding-agent";
+import { Text, type Component } from "@earendil-works/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import { escapeControlChars } from "./terminal-text.ts";
 
 const ASYNC_RENDER_CHAR_THRESHOLD = Number.parseInt(

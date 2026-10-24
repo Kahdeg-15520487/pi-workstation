@@ -1,4 +1,4 @@
-import type { SourceInfo } from "@mariozechner/pi-coding-agent";
+import type { SourceInfo } from "@earendil-works/pi-coding-agent";
 import { ALL_CODE_PREVIEW_TOOLS, type CodePreviewToolName } from "./tool-names.ts";
 
 export type CodePreviewToolStatus =

@@ -2,7 +2,7 @@
  * Central registry of pi-coding-agent built-in tool names.
  *
  * Single source of truth — import from here instead of hardcoding tool names.
- * Keep in sync with @mariozechner/pi-coding-agent's allTools export.
+ * Keep in sync with @earendil-works/pi-coding-agent's allTools export.
  */
 
 export const PI_TOOL_NAMES = [

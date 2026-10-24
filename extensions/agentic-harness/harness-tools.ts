@@ -1,5 +1,5 @@
-import { Type, type TUnsafe } from "@sinclair/typebox";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { Type, type TUnsafe } from "typebox";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   selectPlanForMilestone,
   selectMilestoneSummary,

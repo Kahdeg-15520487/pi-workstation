@@ -1,6 +1,6 @@
 // extensions/agentic-harness/tests/editor-border.test.ts
 import { describe, expect, it } from "vitest";
-import { visibleWidth } from "@mariozechner/pi-tui";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   fitBorder,
   buildTopLeftSegments,

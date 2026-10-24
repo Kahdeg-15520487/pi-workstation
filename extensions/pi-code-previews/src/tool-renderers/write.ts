@@ -1,6 +1,6 @@
-import type { ExtensionAPI, Theme } from "@mariozechner/pi-coding-agent";
-import { createWriteToolDefinition, getLanguageFromPath } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+import { createWriteToolDefinition, getLanguageFromPath } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { AsyncPreview, shouldRenderAsync } from "../async-preview.ts";
 import { getObjectValue, getPathArg, getTextContent } from "../data.ts";
 import {

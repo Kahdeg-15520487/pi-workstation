@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { visibleWidth } from "@mariozechner/pi-tui";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import { shimmerSegments, shimmerText, stripAnsi } from "../shimmer.js";
 
 const theme = {

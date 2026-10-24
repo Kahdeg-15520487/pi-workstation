@@ -1,6 +1,6 @@
 /* eslint-disable no-control-regex */
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import { truncateToWidth, visibleWidth, type Component } from "@mariozechner/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import {
   changedRanges,
   wordEmphasisTokenValues,

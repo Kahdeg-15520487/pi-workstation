@@ -1,5 +1,5 @@
 // extensions/agentic-harness/editor-border.ts
-import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 /**
  * Render a border line with left/right content embedded inside horizontal fill.

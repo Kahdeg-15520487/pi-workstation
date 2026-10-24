@@ -6,8 +6,8 @@
  * future related conversations.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Type } from "@sinclair/typebox";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import { getCachedIndex, setCachedIndex, saveIndex } from "./storage";
 import { detectKeywords, selectTemplateFromKeywords, TEMPLATE_LABELS } from "./templates";
 import { recallMemories } from "./recall";
