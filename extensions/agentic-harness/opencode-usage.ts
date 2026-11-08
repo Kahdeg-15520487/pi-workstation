@@ -1061,43 +1061,27 @@ export async function collectKeyPanel(paths: OpenCodePaths): Promise<KeyPanelSna
 
 // --- Extension ------------------------------------------------------------
 
-export function registerOpenCodeUsage(pi: ExtensionAPI): void {
-	pi.registerMessageRenderer<UsageSnapshot>(USAGE_CUSTOM_TYPE, (message, { outputPad }, theme) => {
-		const snapshot = message.details;
-		const box = new Box(outputPad, 1, (text) => theme.bg("customMessageBg", text));
-		if (!snapshot) {
-			box.addChild(new Text(message.content as string, 0, 0));
-			return box;
-		}
-		for (const line of buildUsagePanel(snapshot)) {
-			box.addChild(new Text(line.length === 0 ? "" : paint(line, theme), 0, 0));
-		}
-		return box;
-	});
+const usageCompletions = (prefix: string) => {
+	const token = prefix.trim().toLowerCase();
+	// A second word is already a choice; offer completions only for the first.
+	if (token.length === 0 || /\s/.test(token)) return null;
+	const matches = [...RANGES, "full"].filter((option) => option.startsWith(token));
+	return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
+};
 
-	pi.registerMessageRenderer<KeyPanelSnapshot>(KEYS_CUSTOM_TYPE, (message, { outputPad }, theme) => {
-		const snapshot = message.details;
-		const box = new Box(outputPad, 1, (text) => theme.bg("customMessageBg", text));
-		if (!snapshot) {
-			box.addChild(new Text(message.content as string, 0, 0));
-			return box;
-		}
-		for (const line of buildKeyPanel(snapshot)) {
-			box.addChild(new Text(line.length === 0 ? "" : paint(line, theme), 0, 0));
-		}
-		return box;
-	});
+const keyCompletions = (prefix: string) => {
+	const token = prefix.trim().toLowerCase();
+	const options = ["status", "rotate", "auto", "on", "off"];
+	const matches = options.filter((option) => option.startsWith(token) && option !== token);
+	return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
+};
 
-	pi.registerCommand("opencode-usage", {
-		description: "Show the OpenCode Go quota and per-model spend",
-		getArgumentCompletions: (prefix) => {
-			const token = prefix.trim().toLowerCase();
-			// A second word is already a choice; offer completions only for the first.
-			if (token.length === 0 || /\s/.test(token)) return null;
-			const matches = [...RANGES, "full"].filter((option) => option.startsWith(token));
-			return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
-		},
-		handler: async (args, ctx) => {
+/**
+ * Show the OpenCode Go quota/spend panel.
+ * Exported so /provider dispatches to the same implementation as the legacy
+ * /opencode-usage alias instead of duplicating it.
+ */
+export async function runOpenCodeUsage(pi: ExtensionAPI, args: string, ctx: ExtensionContext): Promise<void> {
 			const parsed = parseUsageArgs(args);
 			if (parsed.error) {
 				ctx.ui.notify(parsed.error, "error");
@@ -1149,18 +1133,10 @@ export function registerOpenCodeUsage(pi: ExtensionAPI): void {
 			for (const problem of [snapshot.quotaError, snapshot.spendError]) {
 				if (problem) ctx.ui.notify(problem, "error");
 			}
-		},
-	});
+}
 
-	pi.registerCommand("opencode-key", {
-		description: "Show or rotate the OpenCode Go auth.json subscriptions",
-		getArgumentCompletions: (prefix) => {
-			const token = prefix.trim().toLowerCase();
-			const options = ["status", "rotate", "auto", "on", "off"];
-			const matches = options.filter((option) => option.startsWith(token) && option !== token);
-			return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
-		},
-		handler: async (args, ctx) => {
+/** Show or rotate the OpenCode Go subscriptions. Exported for /provider. */
+export async function runOpenCodeKeys(pi: ExtensionAPI, args: string, ctx: ExtensionContext): Promise<void> {
 			const parsed = parseKeyArgs(args);
 			const paths = defaultOpenCodePaths();
 
@@ -1198,7 +1174,45 @@ export function registerOpenCodeUsage(pi: ExtensionAPI): void {
 				display: true,
 				details: snapshot,
 			});
-		},
+}
+
+export function registerOpenCodeUsage(pi: ExtensionAPI): void {
+	pi.registerMessageRenderer<UsageSnapshot>(USAGE_CUSTOM_TYPE, (message, { outputPad }, theme) => {
+		const snapshot = message.details;
+		const box = new Box(outputPad, 1, (text) => theme.bg("customMessageBg", text));
+		if (!snapshot) {
+			box.addChild(new Text(message.content as string, 0, 0));
+			return box;
+		}
+		for (const line of buildUsagePanel(snapshot)) {
+			box.addChild(new Text(line.length === 0 ? "" : paint(line, theme), 0, 0));
+		}
+		return box;
+	});
+
+	pi.registerMessageRenderer<KeyPanelSnapshot>(KEYS_CUSTOM_TYPE, (message, { outputPad }, theme) => {
+		const snapshot = message.details;
+		const box = new Box(outputPad, 1, (text) => theme.bg("customMessageBg", text));
+		if (!snapshot) {
+			box.addChild(new Text(message.content as string, 0, 0));
+			return box;
+		}
+		for (const line of buildKeyPanel(snapshot)) {
+			box.addChild(new Text(line.length === 0 ? "" : paint(line, theme), 0, 0));
+		}
+		return box;
+	});
+
+	pi.registerCommand("opencode-usage", {
+		description: "Show the OpenCode Go quota and per-model spend",
+		getArgumentCompletions: usageCompletions,
+		handler: (args, ctx) => runOpenCodeUsage(pi, args, ctx),
+	});
+
+	pi.registerCommand("opencode-key", {
+		description: "Show or rotate the OpenCode Go auth.json subscriptions",
+		getArgumentCompletions: keyCompletions,
+		handler: (args, ctx) => runOpenCodeKeys(pi, args, ctx),
 	});
 
 	// Recovery probes run in the background so they never delay a turn.

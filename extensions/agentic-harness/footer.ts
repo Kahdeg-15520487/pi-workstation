@@ -6,6 +6,7 @@ import { PLAN_PROGRESS_SPINNER_MS } from "./harness-progress.js";
 import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";
 import { getCurrentTodos, subscribeOnChange } from "./simple-todo.js";
 import { shimmerText, type ShimmerPalette } from "./shimmer.js";
+import { shortProviderName } from "./provider-usage.js";
 
 // Types
 
@@ -28,6 +29,8 @@ export interface FooterContext {
   getGitStats: () => GitStats | undefined;
   getThinkingLevel: () => "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | undefined;
   getModelInfo: () => ModelInfo | undefined;
+  /** Active model's provider id ("github-copilot", "opencode-go", ...). Optional for older call sites. */
+  getProviderName?: () => string | undefined;
 }
 
 export interface CacheStats {
@@ -50,9 +53,9 @@ export interface ActiveTools {
   running: Map<string, string | ActiveToolStatus>;
 }
 
-type FooterSegmentId = "logo" | "path" | "git" | "model" | "thinking" | "context" | "goal" | "statuses" | "tools" | "cache";
+type FooterSegmentId = "logo" | "path" | "git" | "model" | "thinking" | "context" | "goal" | "statuses" | "tools" | "cache" | "provider";
 
-type FooterSegmentColor = ThemeColor | "logo" | "path" | "git" | "model" | "thinking" | "context" | "default";
+type FooterSegmentColor = ThemeColor | "logo" | "path" | "git" | "model" | "thinking" | "context" | "provider" | "default";
 
 type FooterSegment = {
   id: FooterSegmentId;
@@ -72,6 +75,17 @@ export interface FooterOptions {
   getGoalSummary?: () => string | undefined;
   /** Cosmetic override for the displayed model name. Falls back to the real active model name when unset. */
   modelDisplayName?: string;
+  /**
+   * Per-segment visibility. Absent ids stay visible, so a new segment appears by
+   * default and one can be switched off without redefining a whole preset.
+   */
+  segmentVisibility?: Record<string, boolean>;
+  /**
+   * Remaining subscription quota for the active provider, supplied by a
+   * UsageCache. Returns undefined while nothing is known yet, in which case the
+   * segment still renders provider + model and shows an em dash for the limit.
+   */
+  getUsageLimit?: () => { text: string; remainingPercent?: number } | undefined;
 }
 
 // Nerd Font Icons
@@ -87,6 +101,7 @@ const ICONS = {
   tool: "󰒓",
   status: "󰄬",
   goal: "󰓎",
+  provider: "󰒍",
 } as const;
 
 const ICONS_PLAIN = {
@@ -100,6 +115,7 @@ const ICONS_PLAIN = {
   tool: "▶",
   status: "●",
   goal: "◎",
+  provider: "⬡",
 } as const;
 
 let useNerdIcons = false;
@@ -114,8 +130,8 @@ const FOOTER_PRESET_DEFINITIONS: Record<FooterPresetName, FooterPresetDefinition
   // Two rows: an identity/status row (which may truncate long goal/tool/status
   // text) and a dedicated live-metrics row so context + cache rate are never
   // pushed off-screen by a long goal summary.
-  default:  { lines: [["logo", "goal", "model", "path", "git", "tools", "statuses"], ["context", "cache"]] },
-  compact:  { lines: [["logo", "goal", "model", "path", "git", "context", "cache", "statuses"]] },
+  default:  { lines: [["logo", "goal", "model", "path", "git", "tools", "statuses"], ["context", "cache", "provider"]] },
+  compact:  { lines: [["logo", "goal", "model", "path", "git", "context", "cache", "provider", "statuses"]] },
   minimal:  { lines: [["logo", "goal", "path", "git", "context", "statuses"]] },
 };
 
@@ -152,6 +168,8 @@ const POWERLINE_COLORS: Record<string, { fg: string; bg: string }> = {
   success:  { fg: "\x1b[38;2;200;200;200m", bg: "\x1b[48;2;65;95;75m" },
   warning:  { fg: "\x1b[38;2;200;200;200m", bg: "\x1b[48;2;110;85;45m" },
   accent:   { fg: "\x1b[38;2;200;200;200m", bg: "\x1b[48;2;70;70;100m" },
+  provider: { fg: "\x1b[38;2;200;200;200m", bg: "\x1b[48;2;75;85;95m" },
+  error:    { fg: "\x1b[38;2;235;200;200m", bg: "\x1b[48;2;120;55;55m" },
   default:  { fg: "\x1b[39m", bg: "\x1b[49m" },
 };
 
@@ -243,6 +261,8 @@ export class WorkstationFooter implements Component {
   private glyphs: FooterGlyphMode;
   private modelDisplayNameOverride?: string;
   private getGoalSummary: () => string | undefined;
+  private segmentVisibility: Record<string, boolean>;
+  private getUsageLimit: () => { text: string; remainingPercent?: number } | undefined;
   private unsubscribeTodo: (() => void) | null = null;
   private spinnerTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -264,6 +284,8 @@ export class WorkstationFooter implements Component {
     this.glyphs = options.glyphs ?? (useNerdIcons ? "nerd" : "plain");
     this.modelDisplayNameOverride = options.modelDisplayName;
     this.getGoalSummary = options.getGoalSummary ?? (() => undefined);
+    this.segmentVisibility = options.segmentVisibility ?? {};
+    this.getUsageLimit = options.getUsageLimit ?? (() => undefined);
     this.tui = tui;
     this.unsubscribeTodo = subscribeOnChange(() => this.schedulePlanRender());
     this.updateSpinnerTimer();
@@ -312,7 +334,12 @@ export class WorkstationFooter implements Component {
   }
 
   private pickSegments(ids: FooterSegmentId[], segments: Map<FooterSegmentId, FooterSegment>): FooterSegment[] {
-    return ids.map((id) => segments.get(id)).filter((s): s is FooterSegment => !!s);
+    // Visibility is applied here rather than in the presets so one config flag
+    // hides a segment in every preset at once.
+    return ids
+      .filter((id) => this.segmentVisibility[id] ?? true)
+      .map((id) => segments.get(id))
+      .filter((s): s is FooterSegment => !!s);
   }
 
   private buildSegments(): Map<FooterSegmentId, FooterSegment> {
@@ -373,6 +400,28 @@ export class WorkstationFooter implements Component {
 
     segs.set("context", { id: "context", text: ctxPart, icon: icons.context, color: "context", priority: 0 });
     segs.set("cache", { id: "cache", text: cacheText, icon: icons.cache, color: cacheColor, priority: 5 });
+
+    // Provider identity + remaining subscription quota, deliberately last on the
+    // metrics row. The provider id comes from the active model; the limit text
+    // comes from a UsageCache handed in by index.ts, so this module never talks
+    // to the network. Until the first fetch lands the segment still renders
+    // provider · model and shows an em dash, rather than appearing and vanishing.
+    const providerName = this.footerCtx.getProviderName?.();
+    if (providerName) {
+      const usage = this.getUsageLimit();
+      const remaining = usage?.remainingPercent;
+      const providerColor: FooterSegmentColor =
+        remaining === undefined ? "provider" :
+        remaining < 15 ? "error" :
+        remaining < 40 ? "warning" : "success";
+      segs.set("provider", {
+        id: "provider",
+        text: `${shortProviderName(providerName)} · ${modelName} · ${usage?.text ?? "—"}`,
+        icon: icons.provider,
+        color: providerColor,
+        priority: 6,
+      });
+    }
 
     const goalSummary = this.getGoalSummary();
     if (goalSummary) {

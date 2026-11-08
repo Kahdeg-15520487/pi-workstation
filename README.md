@@ -6,7 +6,7 @@ Extension suite for the [pi coding agent](https://github.com/earendil-works/pi):
 
 | Extension | Purpose |
 |---|---|
-| `extensions/agentic-harness/` | Progress tracking tools, powerline footer, `webfetch`, `ask_user_question`, custom compaction, OpenCode Go usage/key rotation, skills |
+| `extensions/agentic-harness/` | Progress tracking tools, powerline footer, `webfetch`, `ask_user_question`, custom compaction, `/provider` usage + key rotation for OpenCode Go and GitHub Copilot, skills |
 | `extensions/workspace-memory/` | Structured memory save/recall per workspace |
 | `extensions/pi-code-previews/` | Shiki-highlighted previews for tool call results |
 
@@ -29,8 +29,8 @@ Extension suite for the [pi coding agent](https://github.com/earendil-works/pi):
 | `/welcome` | Toggle welcome banner |
 | `/stash-save`, `/stash-restore`, `/stash-clear` | Save/restore/clear editor buffer (keys: Ctrl-S/R/K) |
 | `/memory list\|show\|save\|delete\|search\|stats` | Manage workspace memories |
-| `/opencode-usage [24h\|7d\|30d\|all] [full]` | OpenCode Go quota and per-model spend |
-| `/opencode-key [rotate\|auto on\|off\|status]` | Inspect and rotate OpenCode Go `key`/`key2` subscriptions |
+| `/provider [<provider>] [<verb>] [params]` | Unified usage: `opencode` (quota + spend + keys) and `copilot` (premium quota) |
+| `/opencode-usage`, `/opencode-key` | Legacy aliases, same implementation as `/provider` |
 | `/code-preview-health`, `/code-preview-settings` | Preview renderer status and settings |
 
 ## Configuration
@@ -44,6 +44,7 @@ Extension suite for the [pi coding agent](https://github.com/earendil-works/pi):
 | `PI_AGENTIC_MICROCOMPACTION` | `1` = compact old tool results in context |
 | `.pi/agentic-ui.json` | Project-local footer overrides |
 | `~/.pi/agent/opencode-key-rotation.json` | Active OpenCode Go subscription, failover flag, auto toggle |
+| `~/.pi/agent/usage-cache-<provider>.json` | Last quota reading per provider (5-min TTL, survives restarts) |
 
 Env vars take precedence over `.pi/agentic-ui.json`; per-session defaults are `plain` glyphs and `default` preset.
 

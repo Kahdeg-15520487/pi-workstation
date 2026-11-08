@@ -6,6 +6,8 @@ import { shimmerText, type ShimmerPalette } from "./shimmer.js";
 import { registerWelcomeCommand } from "./welcome-ui.js";
 import { registerEditorStashCommands } from "./editor-stash.js";
 import { registerOpenCodeUsage } from "./opencode-usage.js";
+import { registerProviderCommand } from "./provider-command.js";
+import { PROVIDER_COPILOT, PROVIDER_OPENCODE, bindingWindow, formatUsageLimit, getSharedUsageCache } from "./provider-usage.js";
 import { installEditorComposition } from "./editor-composition.js";
 import { homedir } from "os";
 import { join, dirname } from "path";
@@ -724,6 +726,11 @@ export default function (pi: ExtensionAPI) {
       refreshGitStats();
       const unsubBranch = footerData.onBranchChange(() => refreshGitStats());
 
+      const usageCaches = [PROVIDER_OPENCODE, PROVIDER_COPILOT]
+        .map((provider) => getSharedUsageCache(provider))
+        .filter((cache): cache is NonNullable<typeof cache> => !!cache);
+      const unsubUsage = usageCaches.map((cache) => cache.subscribe(() => tui.requestRender()));
+
       const footer = new WorkstationFooter(theme, footerData, {
         cwd: ctx.cwd,
         getModelName: () => ctx.model?.name,
@@ -731,10 +738,22 @@ export default function (pi: ExtensionAPI) {
         getGitStats: () => gitStats,
         getThinkingLevel: () => undefined,
         getModelInfo: () => getModelInfo(ctx),
+        getProviderName: () => ctx.model?.provider,
       }, cacheStats, activeTools, tui, {
         preset: uiSettings.footerPreset,
         glyphs: uiSettings.footerGlyphs,
         modelDisplayName: uiSettings.modelDisplayName,
+        segmentVisibility: uiSettings.footerSegments,
+        getUsageLimit: () => {
+          const cache = getSharedUsageCache(ctx.model?.provider);
+          if (!cache) return undefined;
+          // Cheap no-op unless stale and outside any backoff window; this is what
+          // keeps the badge current without polling on every render.
+          cache.ensureFresh();
+          const usage = cache.current();
+          if (!usage) return { text: "—" };
+          return { text: formatUsageLimit(usage.windows), remainingPercent: bindingWindow(usage.windows)?.remainingPercent };
+        },
       });
 
       const originalDispose = footer.dispose.bind(footer);
@@ -742,6 +761,7 @@ export default function (pi: ExtensionAPI) {
         originalDispose();
         clearInterval(gitTimer);
         unsubBranch();
+        for (const unsubscribe of unsubUsage) unsubscribe();
       };
 
       return footer;
@@ -769,4 +789,5 @@ export default function (pi: ExtensionAPI) {
   });
 
   registerOpenCodeUsage(pi);
+  registerProviderCommand(pi);
 }

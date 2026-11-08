@@ -11,7 +11,7 @@ An extension for the [pi coding agent](https://github.com/earendil-works/pi) foc
 - **Custom compaction** — detailed 9-section summary via `session_before_compact`; opt-in microcompaction via `PI_AGENTIC_MICROCOMPACTION=1`.
 - **Editor composition** — border + status line with Ctrl-S stash / Ctrl-R restore / Ctrl-K clear shortcuts, plus `/stash-save` / `/stash-restore` / `/stash-clear` commands.
 - **`/welcome`** — toggle the welcome header banner.
-- **OpenCode Go usage + key rotation** — `/opencode-usage` shows quota windows and per-model spend; `/opencode-key` shows both `auth.json` subscriptions and rotates the active one. Auto-failover (default on) swaps to the standby key on 429/quota errors and switches back once the preferred key's quota recovers.
+- **Provider usage** — `/provider <provider> <verb> [params]` is one namespace for every subscription pi can read quota from: `opencode-go` (rolling/weekly/monthly + per-model spend, plus `auth.json` key rotation with auto-failover) and `github-copilot` (premium-interaction quota from `copilot_internal/user`). The footer shows `provider · model · <remaining%>` on the metrics row, coloured by how much is left. Readings are cached for 5 minutes with a 60s floor, exponential backoff and provider-declared `Retry-After` honoured, so a live footer never turns into a polling loop.
 - **`/init` / `/setup`** — write `quietStartup: true` to `~/.pi/agent/settings.json`.
 - **Bundled skills** (discovered via `resources_discover`): `agentic-brainstorming`, `agentic-karpathy`, `agentic-rob-pike`, `agentic-simplify`, `agentic-systematic-debugging`.
 - **Unhandled-rejection guard** — swallows benign stream/transport rejections that would otherwise crash pi.
@@ -35,10 +35,16 @@ pi install git:github.com/Kahdeg-15520487/pi-workstation
 /init                recommended settings (quietStartup)
 /welcome             toggle welcome banner
 /stash-save          stash editor buffer
-/opencode-usage      OpenCode Go quota + per-model spend (7d)
-/opencode-key        show both auth.json subscriptions
-/opencode-key rotate switch to the other subscription
-/opencode-key auto off   disable automatic failover/recovery
+/provider             active provider + its quota
+/provider <p> usage   quota windows (default verb)
+/provider oc usage 30d full   OpenCode Go spend detail
+/provider opencode keys       both auth.json subscriptions
+/provider opencode key rotate switch to the other subscription
+/provider opencode key auto off  disable automatic failover/recovery
+
+`<p>` accepts `opencode|opencode-go|oc|go` and `copilot|github-copilot|gh|github`.
+The legacy `/opencode-usage` and `/opencode-key` commands still work and share
+the same implementation.
 /code-preview-*      (from the bundled pi-code-previews extension)
 ```
 
@@ -62,6 +68,45 @@ PI_AGENTIC_FOOTER_GLYPHS=nerd pi
 ```
 
 or set `"agenticHarness": { "footerGlyphs": "nerd" }` in `.pi/settings.json`. Values: `plain` | `nerd`.
+
+## Footer segment visibility
+
+Individual segments can be hidden without redefining a preset. A segment that
+is not mentioned stays visible, so this only ever needs the ones you want to
+change:
+
+```json
+{ "agenticHarness": { "footerSegments": { "provider": false, "git": false } } }
+```
+
+or via env, as a comma-separated list:
+
+```bash
+PI_AGENTIC_FOOTER_SEGMENTS="provider=off,git=off" pi
+```
+
+Segment ids: `logo`, `path`, `git`, `model`, `context`, `cache`, `provider`,
+`goal`, `statuses`, `tools`. Env entries merge over settings.json rather than
+replacing it.
+
+The `provider` segment renders `provider · model · <remaining quota>` right of
+the cache rate. It disappears on its own when the active model's provider has no
+usage source, and shows `—` until the first reading arrives.
+
+## Usage refresh policy
+
+Quota endpoints are rate limited and the footer re-renders constantly, so
+`UsageCache` is deliberately conservative:
+
+- 5-minute TTL — a render loop cannot become a request loop;
+- 60s hard floor between attempts, whatever the TTL says;
+- exponential backoff on failure (1m, 2m, 4m … capped at 1h);
+- `Retry-After` / `x-ratelimit-reset` from the provider win over everything,
+  including a forced `/provider` refresh;
+- the last good snapshot survives failures and a pi restart (persisted to
+  `~/.pi/agent/usage-cache-<provider>.json`);
+- the footer and `/provider` share one cache per provider, so opening the panel
+  does not double the request rate.
 
 ## Development
 

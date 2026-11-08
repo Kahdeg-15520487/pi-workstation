@@ -433,3 +433,121 @@ describe("WorkstationFooter status bridge", () => {
     }
   });
 });
+
+describe("provider segment", () => {
+  function providerFooter(options: {
+    provider?: string;
+    limit?: { text: string; remainingPercent?: number };
+    visibility?: Record<string, boolean>;
+    preset?: "default" | "compact" | "minimal";
+  }): WorkstationFooter {
+    return new WorkstationFooter(
+      stubTheme,
+      footerData(),
+      {
+        cwd: "/tmp/powerline-project",
+        getModelName: () => "test-model",
+        getContextUsage: () => ({ tokens: 42_000, contextWindow: 200_000, percent: 21 }),
+        getGitStats: () => ({ ahead: 0, behind: 0, dirty: 0, untracked: 0 }),
+        getThinkingLevel: () => "high",
+        getModelInfo: () => ({ name: "test-model", isLatest: false }),
+        getProviderName: () => options.provider,
+      },
+      { totalInput: 100, totalCacheRead: 50 },
+      { running: new Map() },
+      null,
+      {
+        preset: options.preset ?? "default",
+        segmentVisibility: options.visibility,
+        getUsageLimit: () => options.limit,
+      },
+    );
+  }
+
+  it("renders provider, model and remaining limit together", () => {
+    const rendered = providerFooter({
+      provider: "opencode-go",
+      limit: { text: "47%", remainingPercent: 47 },
+    }).render(200).join("\n");
+
+    expect(rendered).toContain("opencode · test-model · 47%");
+  });
+
+  it("shortens github-copilot", () => {
+    const rendered = providerFooter({
+      provider: "github-copilot",
+      limit: { text: "63%", remainingPercent: 63 },
+    }).render(200).join("\n");
+
+    expect(rendered).toContain("copilot · test-model · 63%");
+  });
+
+  it("shows an em dash before the first snapshot arrives", () => {
+    const rendered = providerFooter({ provider: "opencode-go" }).render(200).join("\n");
+    expect(rendered).toContain("opencode · test-model · —");
+  });
+
+  it("omits the segment entirely when the provider is unknown", () => {
+    const rendered = providerFooter({ limit: { text: "47%", remainingPercent: 47 } }).render(200).join("\n");
+    expect(rendered).not.toContain("test-model · 47%");
+  });
+
+  it("can be switched off through segmentVisibility", () => {
+    const visible = providerFooter({
+      provider: "opencode-go",
+      limit: { text: "47%", remainingPercent: 47 },
+    });
+    const hidden = providerFooter({
+      provider: "opencode-go",
+      limit: { text: "47%", remainingPercent: 47 },
+      visibility: { provider: false },
+    });
+
+    expect(visible.render(200).join("\n")).toContain("opencode · test-model · 47%");
+    expect(hidden.render(200).join("\n")).not.toContain("opencode · test-model · 47%");
+  });
+
+  it("colours the block by how much quota is left", () => {
+    // The colour must be attached to THIS segment: the cache segment also uses
+    // the warning background, so a bare background lookup would be ambiguous.
+    const colorFor = (remainingPercent: number) => {
+      const rendered = providerFooter({
+        provider: "opencode-go",
+        limit: { text: `${remainingPercent}%`, remainingPercent },
+      }).render(200).join("\n");
+      if (/\x1b\[48;2;120;55;55m[^\x1b]*opencode · test-model/.test(rendered)) return "error";
+      if (/\x1b\[48;2;110;85;45m[^\x1b]*opencode · test-model/.test(rendered)) return "warning";
+      if (/\x1b\[48;2;65;95;75m[^\x1b]*opencode · test-model/.test(rendered)) return "success";
+      return "provider";
+    };
+
+    expect(colorFor(5)).toBe("error");
+    expect(colorFor(30)).toBe("warning");
+    expect(colorFor(80)).toBe("success");
+  });
+
+  it("uses the neutral colour while the limit is unknown", () => {
+    const rendered = providerFooter({ provider: "opencode-go" }).render(200).join("\n");
+    expect(rendered).toMatch(/\x1b\[48;2;75;85;95m[^\x1b]*opencode · test-model/);
+  });
+
+  it("rides along in the compact preset", () => {
+    const rendered = providerFooter({
+      provider: "opencode-go",
+      limit: { text: "47%", remainingPercent: 47 },
+      preset: "compact",
+    }).render(250).join("\n");
+
+    expect(rendered).toContain("opencode · test-model · 47%");
+  });
+
+  it("stays out of the minimal preset", () => {
+    const rendered = providerFooter({
+      provider: "opencode-go",
+      limit: { text: "47%", remainingPercent: 47 },
+      preset: "minimal",
+    }).render(250).join("\n");
+
+    expect(rendered).not.toContain("opencode · test-model · 47%");
+  });
+});
