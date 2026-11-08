@@ -752,7 +752,7 @@ export default function (pi: ExtensionAPI) {
           cache.ensureFresh();
           const usage = cache.current();
           if (!usage) return { text: "—" };
-          return { text: formatUsageLimit(usage.windows), remainingPercent: bindingWindow(usage.windows)?.remainingPercent };
+          return { text: formatUsageLimit(usage.windows), usedPercent: bindingWindow(usage.windows)?.usedPercent };
         },
       });
 

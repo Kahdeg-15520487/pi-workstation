@@ -64,7 +64,7 @@ function formatAge(fetchedAt: number, now: number): string {
 }
 
 /** Build the body lines shared by every verb. */
-export function buildUsageLines(usage: ProviderUsage | undefined, now: number): string[] {
+export function buildUsageLines(usage: ProviderUsage | undefined, now: number = Date.now()): string[] {
   if (!usage) {
     return ["  (no snapshot yet — refresh pending)"];
   }

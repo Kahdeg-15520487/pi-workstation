@@ -2,15 +2,17 @@
  * Provider-agnostic usage / quota reporting.
  *
  * The footer and the /provider command both need "how much of this
- * subscription is left" for whichever provider is active. Each provider reports
- * that in a different shape, so this module normalises them to one model:
+ * subscription has been spent". Each provider reports that in a different
+ * shape, so this module normalises them to one model:
  *
  *   ProviderUsage { provider, fetchedAt, plan?, windows: UsageWindow[] }
- *   UsageWindow   { key, label, remainingPercent, unlimited, remaining?, ... }
+ *   UsageWindow   { key, label, usedPercent, unlimited, used?, ... }
  *
- * `remainingPercent` is always REMAINING (100 = untouched, 0 = exhausted),
- * because every consumer here asks "how much is left". OpenCode reports the
- * opposite (percent used), so that conversion happens in one place.
+ * `usedPercent` is always USED (0 = untouched, 100 = exhausted), because
+ * consumption is what both providers report and what a user actually wants to
+ * see. OpenCode reports percent used directly; Copilot reports
+ * percent_remaining, so its inversion happens in exactly one place
+ * (usedFromRemaining).
  *
  * Providers implemented:
  *
@@ -29,7 +31,7 @@
  *                   at all, so this is the only place that reads `refresh`.
  *
  * `unlimited: true` windows (chat/completions on a business seat) are kept with
- * remainingPercent 100 and are ignored when picking the binding window.
+ * usedPercent 0 and are ignored when picking the binding window.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
@@ -55,12 +57,18 @@ export interface UsageWindow {
    * a bare percentage says nothing about which window it belongs to.
    */
   shortLabel?: string;
-  /** 0..100, REMAINING. 100 = untouched, 0 = exhausted. */
-  remainingPercent: number;
+  /**
+   * 0..100, USED. 0 = untouched, 100 = exhausted.
+   *
+   * Consumption, not headroom: both providers and the OpenCode panel report
+   * what has been spent, and "how much is left" is then one subtraction away
+   * at the point of display.
+   */
+  usedPercent: number;
   /** True when the provider reports the window as unmetered. */
   unlimited: boolean;
-  /** Absolute units remaining, when the provider reports them. */
-  remaining?: number;
+  /** Absolute units consumed, when both used and entitlement are known. */
+  used?: number;
   /** Absolute units granted, when the provider reports them. */
   entitlement?: number;
   /** ISO timestamp/date the window resets, when reported. */
@@ -162,22 +170,25 @@ export function parseCopilotQuota(payload: unknown): { windows: UsageWindow[]; p
     const entitlement = asNumber(snap.entitlement);
 
     // Derive from the absolute numbers when the percentage is missing.
-    let remainingPercent = 100;
+    let usedPercent = 0;
     if (!unlimited) {
       if (percentRemaining !== undefined) {
-        remainingPercent = percentRemaining;
+        usedPercent = usedFromRemaining(percentRemaining);
       } else if (remaining !== undefined && entitlement !== undefined && entitlement > 0) {
-        remainingPercent = (remaining / entitlement) * 100;
+        usedPercent = ((entitlement - remaining) / entitlement) * 100;
       }
     }
+    const used = remaining !== undefined && entitlement !== undefined && entitlement > 0
+      ? Math.max(0, entitlement - remaining)
+      : undefined;
 
     windows.push({
       key,
       label: COPILOT_WINDOW_LABELS[key] ?? key,
       ...(COPILOT_WINDOW_SHORT[key] !== undefined ? { shortLabel: COPILOT_WINDOW_SHORT[key] } : {}),
-      remainingPercent: clampPercent(remainingPercent),
+      usedPercent: clampPercent(usedPercent),
       unlimited,
-      ...(remaining !== undefined ? { remaining } : {}),
+      ...(used !== undefined ? { used } : {}),
       ...(entitlement !== undefined ? { entitlement } : {}),
       ...(resetDate !== undefined && key === "premium_interactions" ? { resetsAt: resetDate } : {}),
     });
@@ -244,9 +255,9 @@ export interface OpenCodeUsageOptions {
   now?: () => number;
 }
 
-/** Convert a used-percent window to the remaining-percent model. */
-export function remainingFromUsed(percentUsed: number): number {
-  return clampPercent(100 - percentUsed);
+/** Convert a provider's remaining-percent figure to the used-percent model. */
+export function usedFromRemaining(percentRemaining: number): number {
+  return clampPercent(100 - percentRemaining);
 }
 
 /** Abbreviations for the footer; OpenCode reports rolling/weekly/monthly. */
@@ -275,7 +286,8 @@ export async function fetchOpenCodeUsage(options: OpenCodeUsageOptions = {}): Pr
       key: window.key,
       label: window.label,
       ...(shortLabel !== undefined ? { shortLabel } : {}),
-      remainingPercent: remainingFromUsed(window.percent),
+      // The OpenCode API reports percent already consumed.
+      usedPercent: clampPercent(window.percent),
       unlimited: false,
       ...(window.resetsAt !== undefined ? { resetsAt: window.resetsAt } : {}),
     };
@@ -287,15 +299,15 @@ export async function fetchOpenCodeUsage(options: OpenCodeUsageOptions = {}): Pr
 // --- Selection ------------------------------------------------------------
 
 /**
- * The window that actually constrains you: the metered one with the least
- * remaining. Unlimited windows are ignored; if every window is unlimited the
- * first is returned so the caller can still render "unlimited".
+ * The window that actually constrains you: the metered one that is furthest
+ * spent. Unlimited windows are ignored; if every window is unlimited the first
+ * is returned so the caller can still render "unlimited".
  */
 export function bindingWindow(windows: readonly UsageWindow[]): UsageWindow | undefined {
   const metered = windows.filter((window) => !window.unlimited);
   if (metered.length === 0) return windows[0];
   return metered.reduce((worst, window) =>
-    window.remainingPercent < worst.remainingPercent ? window : worst,
+    window.usedPercent > worst.usedPercent ? window : worst,
   );
 }
 
@@ -316,18 +328,18 @@ export function formatUsageLimit(windows: readonly UsageWindow[]): string {
   return windows
     .map((window) => {
       const name = window.shortLabel ?? window.label;
-      return window.unlimited ? `${name} ∞` : `${name} ${Math.round(window.remainingPercent)}%`;
+      return window.unlimited ? `${name} ∞` : `${name} ${Math.round(window.usedPercent)}%`;
     })
     .join(" · ");
 }
 
 /** Longer form for /provider output: "premium 63% (31929/50000, resets 2026-12-01)". */
 export function describeWindow(window: UsageWindow): string {
-  const head = `${window.label} ${Math.round(window.remainingPercent)}%`;
+  const head = `${window.label} ${Math.round(window.usedPercent)}% used`;
   if (window.unlimited) return `${window.label} unlimited`;
   const parts: string[] = [];
-  if (window.remaining !== undefined && window.entitlement !== undefined && window.entitlement > 0) {
-    parts.push(`${Math.round(window.remaining)}/${Math.round(window.entitlement)}`);
+  if (window.used !== undefined && window.entitlement !== undefined && window.entitlement > 0) {
+    parts.push(`${Math.round(window.used)}/${Math.round(window.entitlement)}`);
   }
   if (window.resetsAt) parts.push(`resets ${window.resetsAt}`);
   return parts.length > 0 ? `${head} (${parts.join(", ")})` : head;

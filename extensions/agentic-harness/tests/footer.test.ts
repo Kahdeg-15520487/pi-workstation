@@ -437,7 +437,7 @@ describe("WorkstationFooter status bridge", () => {
 describe("provider segment", () => {
   function providerFooter(options: {
     provider?: string;
-    limit?: { text: string; remainingPercent?: number };
+    limit?: { text: string; usedPercent?: number };
     visibility?: Record<string, boolean>;
     preset?: "default" | "compact" | "minimal";
   }): WorkstationFooter {
@@ -467,7 +467,7 @@ describe("provider segment", () => {
   it("renders the provider with its window list", () => {
     const rendered = providerFooter({
       provider: "opencode-go",
-      limit: { text: "47%", remainingPercent: 47 },
+      limit: { text: "47%", usedPercent: 47 },
     }).render(200).join("\n");
 
     expect(rendered).toContain("opencode · 47%");
@@ -476,7 +476,7 @@ describe("provider segment", () => {
   it("shortens github-copilot", () => {
     const rendered = providerFooter({
       provider: "github-copilot",
-      limit: { text: "63%", remainingPercent: 63 },
+      limit: { text: "63%", usedPercent: 63 },
     }).render(200).join("\n");
 
     expect(rendered).toContain("copilot · 63%");
@@ -488,18 +488,18 @@ describe("provider segment", () => {
   });
 
   it("omits the segment entirely when the provider is unknown", () => {
-    const rendered = providerFooter({ limit: { text: "47%", remainingPercent: 47 } }).render(200).join("\n");
+    const rendered = providerFooter({ limit: { text: "47%", usedPercent: 47 } }).render(200).join("\n");
     expect(rendered).not.toContain("opencode");
   });
 
   it("can be switched off through segmentVisibility", () => {
     const visible = providerFooter({
       provider: "opencode-go",
-      limit: { text: "47%", remainingPercent: 47 },
+      limit: { text: "47%", usedPercent: 47 },
     });
     const hidden = providerFooter({
       provider: "opencode-go",
-      limit: { text: "47%", remainingPercent: 47 },
+      limit: { text: "47%", usedPercent: 47 },
       visibility: { provider: false },
     });
 
@@ -507,13 +507,13 @@ describe("provider segment", () => {
     expect(hidden.render(200).join("\n")).not.toContain("opencode");
   });
 
-  it("colours the block by how much quota is left", () => {
+  it("colours the block by how much quota is spent", () => {
     // The colour must be attached to THIS segment: the cache segment also uses
     // the warning background, so a bare background lookup would be ambiguous.
-    const colorFor = (remainingPercent: number) => {
+    const colorFor = (usedPercent: number) => {
       const rendered = providerFooter({
         provider: "opencode-go",
-        limit: { text: `${remainingPercent}%`, remainingPercent },
+        limit: { text: `${usedPercent}%`, usedPercent },
       }).render(200).join("\n");
       if (/\x1b\[48;2;120;55;55m[^\x1b]*opencode/.test(rendered)) return "error";
       if (/\x1b\[48;2;110;85;45m[^\x1b]*opencode/.test(rendered)) return "warning";
@@ -521,9 +521,9 @@ describe("provider segment", () => {
       return "provider";
     };
 
-    expect(colorFor(5)).toBe("error");
-    expect(colorFor(30)).toBe("warning");
-    expect(colorFor(80)).toBe("success");
+    expect(colorFor(90)).toBe("error");
+    expect(colorFor(70)).toBe("warning");
+    expect(colorFor(20)).toBe("success");
   });
 
   it("uses the neutral colour while the limit is unknown", () => {
@@ -534,7 +534,7 @@ describe("provider segment", () => {
   it("rides along in the compact preset", () => {
     const rendered = providerFooter({
       provider: "opencode-go",
-      limit: { text: "47%", remainingPercent: 47 },
+      limit: { text: "47%", usedPercent: 47 },
       preset: "compact",
     }).render(250).join("\n");
 
@@ -544,7 +544,7 @@ describe("provider segment", () => {
   it("stays out of the minimal preset", () => {
     const rendered = providerFooter({
       provider: "opencode-go",
-      limit: { text: "47%", remainingPercent: 47 },
+      limit: { text: "47%", usedPercent: 47 },
       preset: "minimal",
     }).render(250).join("\n");
 

@@ -11,7 +11,7 @@ An extension for the [pi coding agent](https://github.com/earendil-works/pi) foc
 - **Custom compaction** — detailed 9-section summary via `session_before_compact`; opt-in microcompaction via `PI_AGENTIC_MICROCOMPACTION=1`.
 - **Editor composition** — border + status line with Ctrl-S stash / Ctrl-R restore / Ctrl-K clear shortcuts, plus `/stash-save` / `/stash-restore` / `/stash-clear` commands.
 - **`/welcome`** — toggle the welcome header banner.
-- **Provider usage** — `/provider <provider> <verb> [params]` is one namespace for every subscription pi can read quota from: `opencode-go` (rolling/weekly/monthly + per-model spend, plus `auth.json` key rotation with auto-failover) and `github-copilot` (premium-interaction quota from `copilot_internal/user`). The footer shows `provider · model · <remaining%>` on the metrics row, coloured by how much is left. Readings are cached for 5 minutes with a 60s floor, exponential backoff and provider-declared `Retry-After` honoured, so a live footer never turns into a polling loop.
+- **Provider usage** — `/provider <provider> <verb> [params]` is one namespace for every subscription pi can read quota from: `opencode-go` (rolling/weekly/monthly + per-model spend, plus `auth.json` key rotation with auto-failover) and `github-copilot` (premium-interaction quota from `copilot_internal/user`). The footer shows `provider · <used%> per window` on the metrics row, coloured by how much is spent. Readings are cached for 5 minutes with a 60s floor, exponential backoff and provider-declared `Retry-After` honoured, so a live footer never turns into a polling loop.
 - **`/init` / `/setup`** — write `quietStartup: true` to `~/.pi/agent/settings.json`.
 - **Bundled skills** (discovered via `resources_discover`): `agentic-brainstorming`, `agentic-karpathy`, `agentic-rob-pike`, `agentic-simplify`, `agentic-systematic-debugging`.
 - **Unhandled-rejection guard** — swallows benign stream/transport rejections that would otherwise crash pi.
@@ -92,9 +92,14 @@ replacing it.
 The `provider` segment lists **every** metered bucket, right of the cache rate:
 
 ```
-opencode · roll 100% · wk 80% · mo 44%
-copilot  · prem 64% · chat ∞ · comp ∞
+opencode · roll 0% · wk 20% · mo 56%
+copilot  · prem 36% · chat ∞ · comp ∞
 ```
+
+Numbers are **percent consumed**, not headroom: `mo 56%` means 56% of the monthly
+allowance is gone. That matches what both providers report and what the OpenCode
+key panel already showed, so a figure never means "used" in one place and "left"
+in another.
 
 Each number carries its own window label, because a plan meters several buckets
 at once and which one is tightest changes over time — OpenCode's rolling bucket

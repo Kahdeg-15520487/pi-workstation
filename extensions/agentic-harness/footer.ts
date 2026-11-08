@@ -85,7 +85,7 @@ export interface FooterOptions {
    * UsageCache. Returns undefined while nothing is known yet, in which case the
    * segment still renders provider + model and shows an em dash for the limit.
    */
-  getUsageLimit?: () => { text: string; remainingPercent?: number } | undefined;
+  getUsageLimit?: () => { text: string; usedPercent?: number } | undefined;
 }
 
 // Nerd Font Icons
@@ -262,7 +262,7 @@ export class WorkstationFooter implements Component {
   private modelDisplayNameOverride?: string;
   private getGoalSummary: () => string | undefined;
   private segmentVisibility: Record<string, boolean>;
-  private getUsageLimit: () => { text: string; remainingPercent?: number } | undefined;
+  private getUsageLimit: () => { text: string; usedPercent?: number } | undefined;
   private unsubscribeTodo: (() => void) | null = null;
   private spinnerTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -401,7 +401,7 @@ export class WorkstationFooter implements Component {
     segs.set("context", { id: "context", text: ctxPart, icon: icons.context, color: "context", priority: 0 });
     segs.set("cache", { id: "cache", text: cacheText, icon: icons.cache, color: cacheColor, priority: 5 });
 
-    // Provider identity + remaining subscription quota, deliberately last on the
+    // Provider identity + subscription consumption, deliberately last on the
     // metrics row. The provider id comes from the active model; the limit text
     // comes from a UsageCache handed in by index.ts, so this module never talks
     // to the network. Until the first fetch lands the segment still renders
@@ -409,11 +409,12 @@ export class WorkstationFooter implements Component {
     const providerName = this.footerCtx.getProviderName?.();
     if (providerName) {
       const usage = this.getUsageLimit();
-      const remaining = usage?.remainingPercent;
+      // Severity tracks CONSUMPTION: 85% spent is worse than 15% spent.
+      const used = usage?.usedPercent;
       const providerColor: FooterSegmentColor =
-        remaining === undefined ? "provider" :
-        remaining < 15 ? "error" :
-        remaining < 40 ? "warning" : "success";
+        used === undefined ? "provider" :
+        used >= 85 ? "error" :
+        used >= 60 ? "warning" : "success";
       segs.set("provider", {
         id: "provider",
         // No model name: the quota is per account, not per model, and the

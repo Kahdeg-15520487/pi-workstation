@@ -14,7 +14,7 @@ import {
   formatUsageLimit,
   parseCopilotQuota,
   parseRetryAfterMs,
-  remainingFromUsed,
+  usedFromRemaining,
   shortProviderName,
   type ProviderUsage,
   type UsageSource,
@@ -61,7 +61,7 @@ function window(overrides: Partial<UsageWindow> = {}): UsageWindow {
   return {
     key: "rolling",
     label: "5h",
-    remainingPercent: 100,
+    usedPercent: 0,
     unlimited: false,
     ...overrides,
   };
@@ -87,15 +87,15 @@ describe("parseCopilotQuota", () => {
 
     const premium = windows[0]!;
     expect(premium.label).toBe("premium");
-    expect(premium.remainingPercent).toBeCloseTo(63.8);
+    expect(premium.usedPercent).toBeCloseTo(36.2);
     expect(premium.unlimited).toBe(false);
-    expect(premium.remaining).toBe(31929);
+    expect(premium.used).toBe(18071);
     expect(premium.entitlement).toBe(50000);
     expect(premium.resetsAt).toBe("2026-12-01");
 
-    // Unlimited buckets keep remainingPercent at 100 and are flagged.
+    // Unlimited buckets keep usedPercent at 0 and are flagged.
     expect(windows[1]!.unlimited).toBe(true);
-    expect(windows[1]!.remainingPercent).toBe(100);
+    expect(windows[1]!.usedPercent).toBe(0);
   });
 
   it("drops buckets the plan does not include", () => {
@@ -109,7 +109,7 @@ describe("parseCopilotQuota", () => {
     const { windows } = parseCopilotQuota({
       quota_snapshots: { premium_interactions: { has_quota: true, unlimited: false, remaining: 25, entitlement: 100 } },
     });
-    expect(windows[0]!.remainingPercent).toBe(25);
+    expect(windows[0]!.usedPercent).toBe(75);
   });
 
   it("survives junk without throwing", () => {
@@ -126,13 +126,13 @@ describe("parseCopilotQuota", () => {
   });
 });
 
-describe("remaining arithmetic", () => {
-  it("converts OpenCode's used-percent to remaining", () => {
-    expect(remainingFromUsed(0)).toBe(100);
-    expect(remainingFromUsed(14)).toBe(86);
-    expect(remainingFromUsed(100)).toBe(0);
-    expect(remainingFromUsed(140)).toBe(0);
-    expect(remainingFromUsed(-5)).toBe(100);
+describe("usage arithmetic", () => {
+  it("converts a provider's remaining-percent figure to used", () => {
+    expect(usedFromRemaining(0)).toBe(100);
+    expect(usedFromRemaining(14)).toBe(86);
+    expect(usedFromRemaining(100)).toBe(0);
+    expect(usedFromRemaining(140)).toBe(0);
+    expect(usedFromRemaining(-5)).toBe(100);
   });
 
   it("shortens provider ids", () => {
@@ -143,15 +143,15 @@ describe("remaining arithmetic", () => {
 });
 
 describe("binding window", () => {
-  it("picks the metered window with the least remaining", () => {
-    const binding = bindingWindow([window({ remainingPercent: 100 }), window({ key: "monthly", remainingPercent: 47 })]);
-    expect(binding?.remainingPercent).toBe(47);
+  it("picks the metered window that is furthest spent", () => {
+  const binding = bindingWindow([window({ usedPercent: 10 }), window({ key: "monthly", usedPercent: 53 })]);
+  expect(binding?.usedPercent).toBe(53);
   });
 
   it("ignores unlimited windows", () => {
     const binding = bindingWindow([
-      window({ key: "chat", remainingPercent: 100, unlimited: true }),
-      window({ key: "premium", remainingPercent: 63 }),
+      window({ key: "chat", usedPercent: 100, unlimited: true }),
+      window({ key: "premium", usedPercent: 63 }),
     ]);
     expect(binding?.key).toBe("premium");
   });
@@ -162,16 +162,16 @@ describe("binding window", () => {
   });
 
   it("renders a rounded percentage and an em dash for nothing known", () => {
-    expect(formatUsageLimit([window({ remainingPercent: 47.4 })])).toBe("5h 47%");
+    expect(formatUsageLimit([window({ usedPercent: 47.4 })])).toBe("5h 47%");
     expect(formatUsageLimit([])).toBe("—");
   });
 
   it("describes absolute units and reset dates", () => {
     expect(
       describeWindow(
-        window({ key: "premium", label: "premium", remainingPercent: 63.8, remaining: 31929, entitlement: 50000, resetsAt: "2026-12-01" }),
+        window({ key: "premium", label: "premium", usedPercent: 36.2, used: 18071, entitlement: 50000, resetsAt: "2026-12-01" }),
       ),
-    ).toBe("premium 64% (31929/50000, resets 2026-12-01)");
+    ).toBe("premium 36% used (18071/50000, resets 2026-12-01)");
     expect(describeWindow(window({ key: "chat", label: "chat", unlimited: true }))).toBe("chat unlimited");
   });
 });
@@ -286,7 +286,7 @@ describe("UsageCache refresh policy", () => {
     let shouldFail = false;
     const fetchImpl = vi.fn(async () => {
       if (shouldFail) throw new Error("network down");
-      return usage([window({ remainingPercent: 42 })]);
+      return usage([window({ usedPercent: 42 })]);
     });
     const cache = new UsageCache({ source: sourceOf(fetchImpl), now: () => now, ttlMs: 0, minIntervalMs: 0 });
 
@@ -294,8 +294,8 @@ describe("UsageCache refresh policy", () => {
     shouldFail = true;
     now = 1000;
     const after = await cache.refresh();
-    expect(after?.windows[0]?.remainingPercent).toBe(42);
-    expect(cache.current()?.windows[0]?.remainingPercent).toBe(42);
+    expect(after?.windows[0]?.usedPercent).toBe(42);
+    expect(cache.current()?.windows[0]?.usedPercent).toBe(42);
   });
 
   it("never runs two fetches at once", async () => {
@@ -317,8 +317,8 @@ describe("UsageCache refresh policy", () => {
 
   it("notifies subscribers after a successful fetch", async () => {
     const seen: number[] = [];
-    const cache = new UsageCache({ source: sourceOf(async () => usage([window({ remainingPercent: 88 })])), now: () => 0 });
-    const unsubscribe = cache.subscribe((snapshot) => seen.push(snapshot.windows[0]!.remainingPercent));
+    const cache = new UsageCache({ source: sourceOf(async () => usage([window({ usedPercent: 88 })])), now: () => 0 });
+    const unsubscribe = cache.subscribe((snapshot) => seen.push(snapshot.windows[0]!.usedPercent));
 
     await cache.refresh();
     expect(seen).toEqual([88]);
@@ -333,15 +333,15 @@ describe("UsageCache refresh policy", () => {
     try {
       const persistPath = join(dir, "cache.json");
       const writer = new UsageCache({
-        source: sourceOf(async () => usage([window({ remainingPercent: 61 })])),
+        source: sourceOf(async () => usage([window({ usedPercent: 61 })])),
         now: () => 1234,
         persistPath,
       });
       await writer.refresh();
 
-      const fetchImpl = vi.fn(async () => usage([window({ remainingPercent: 0 })]));
+      const fetchImpl = vi.fn(async () => usage([window({ usedPercent: 0 })]));
       const reader = new UsageCache({ source: sourceOf(fetchImpl), now: () => 1300, persistPath });
-      expect(reader.current()?.windows[0]?.remainingPercent).toBe(61);
+      expect(reader.current()?.windows[0]?.usedPercent).toBe(61);
       // Still inside the 5-minute TTL, so the restored snapshot is reused and no
       // request is made on startup.
       reader.ensureFresh();
@@ -386,7 +386,7 @@ describe("/provider command surface", () => {
 
   it("renders usage lines with plan, binding window and age", () => {
     const lines = buildUsageLines(
-      { provider: PROVIDER_COPILOT, fetchedAt: 0, plan: "business", windows: [window({ key: "premium", label: "premium", remainingPercent: 63.8, remaining: 31929, entitlement: 50000, resetsAt: "2026-12-01" })] },
+      { provider: PROVIDER_COPILOT, fetchedAt: 0, plan: "business", windows: [window({ key: "premium", label: "premium", usedPercent: 63.8, remaining: 31929, entitlement: 50000, resetsAt: "2026-12-01" })] },
       120_000,
     );
     const text = lines.join("\n");
@@ -402,33 +402,33 @@ describe("/provider command surface", () => {
 
 describe("formatUsageLimit window labels", () => {
   it("names the window so a percentage is never ambiguous", () => {
-    expect(formatUsageLimit([window({ shortLabel: "mo", remainingPercent: 47.4 })])).toBe("mo 47%");
+    expect(formatUsageLimit([window({ shortLabel: "mo", usedPercent: 47.4 })])).toBe("mo 47%");
   });
 
   it("lists every window, not just the tightest one", () => {
     const windows = [
-      window({ key: "rolling", label: "rolling", shortLabel: "roll", remainingPercent: 90 }),
-      window({ key: "weekly", label: "weekly", shortLabel: "wk", remainingPercent: 81 }),
-      window({ key: "monthly", label: "monthly", shortLabel: "mo", remainingPercent: 45 }),
+      window({ key: "rolling", label: "rolling", shortLabel: "roll", usedPercent: 90 }),
+      window({ key: "weekly", label: "weekly", shortLabel: "wk", usedPercent: 81 }),
+      window({ key: "monthly", label: "monthly", shortLabel: "mo", usedPercent: 45 }),
     ];
     expect(formatUsageLimit(windows)).toBe("roll 90% · wk 81% · mo 45%");
   });
 
   it("marks unlimited buckets instead of implying they are about to run out", () => {
     const windows = [
-      window({ key: "premium_interactions", shortLabel: "prem", remainingPercent: 64 }),
+      window({ key: "premium_interactions", shortLabel: "prem", usedPercent: 64 }),
       window({ key: "chat", shortLabel: "chat", unlimited: true }),
     ];
     expect(formatUsageLimit(windows)).toBe("prem 64% · chat ∞");
   });
 
   it("falls back to the long label when no abbreviation exists", () => {
-    expect(formatUsageLimit([window({ label: "daily", remainingPercent: 47.4 })])).toBe("daily 47%");
+    expect(formatUsageLimit([window({ label: "daily", usedPercent: 47.4 })])).toBe("daily 47%");
   });
 });
 
 describe("fetchOpenCodeUsage", () => {
-  it("converts used-percent to remaining and tags every window", async () => {
+  it("passes the reported consumption through and tags every window", async () => {
     const result = await fetchOpenCodeUsage({
       resolveKey: async () => ({ key: "test-key", source: "auth.json" }),
       fetchQuotaImpl: async () => [
@@ -439,13 +439,13 @@ describe("fetchOpenCodeUsage", () => {
     });
 
     expect(result.provider).toBe(PROVIDER_OPENCODE);
-    expect(result.windows.map((w) => [w.key, w.remainingPercent, w.shortLabel])).toEqual([
-      ["rolling", 90, "roll"],
-      ["weekly", 80, "wk"],
-      ["monthly", 45, "mo"],
+    expect(result.windows.map((w) => [w.key, w.usedPercent, w.shortLabel])).toEqual([
+      ["rolling", 10, "roll"],
+      ["weekly", 20, "wk"],
+      ["monthly", 55, "mo"],
     ]);
     expect(result.windows[2]?.resetsAt).toBe("2026-11-13T04:09:09.000Z");
-    expect(formatUsageLimit(result.windows)).toBe("roll 90% · wk 80% · mo 45%");
+    expect(formatUsageLimit(result.windows)).toBe("roll 10% · wk 20% · mo 55%");
   });
 
   it("keeps an unknown window key usable, just unlabelled", async () => {
@@ -455,7 +455,7 @@ describe("fetchOpenCodeUsage", () => {
     });
 
     expect(result.windows[0]?.shortLabel).toBeUndefined();
-    expect(formatUsageLimit(result.windows)).toBe("daily 96%");
+    expect(formatUsageLimit(result.windows)).toBe("daily 4%");
   });
 
   it("explains a missing credential instead of returning empty windows", async () => {
