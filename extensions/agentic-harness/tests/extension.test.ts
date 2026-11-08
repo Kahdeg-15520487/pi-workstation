@@ -12,6 +12,8 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
     parameters: {},
     execute: vi.fn(),
   })),
+  getAgentDir: () => join(tmpdir(), "pi-agent-test"),
+  readStoredCredential: () => undefined,
   isToolCallEventType: (toolName: string, event: any) => event?.toolName === toolName,
   keyHint: (k: string, d?: string) => `${k}${d ? ` ${d}` : ""}`,
   keyText: (t: string) => t,
@@ -20,6 +22,7 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
 }));
 
 vi.mock("@earendil-works/pi-tui", () => ({
+  Box: class MockBox {},
   Text: class MockText {},
   truncateToWidth: (text: string, width?: number) => typeof width === "number" ? text.slice(0, width) : text,
   visibleWidth: (text: string) => text.replace(/\x1b\[[0-9;]*m/g, "").length,
@@ -72,6 +75,7 @@ function createMockPi() {
     registerCommand: (name: string, def: any) => {
       commands.set(name, def);
     },
+    registerMessageRenderer: vi.fn(),
     on: (event: string, handler: any) => {
       if (!events.has(event)) events.set(event, []);
       events.get(event)!.push(handler);

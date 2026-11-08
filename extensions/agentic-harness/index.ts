@@ -5,6 +5,7 @@ import { resolveAgenticUiSettings } from "./ui-settings.js";
 import { shimmerText, type ShimmerPalette } from "./shimmer.js";
 import { registerWelcomeCommand } from "./welcome-ui.js";
 import { registerEditorStashCommands } from "./editor-stash.js";
+import { registerOpenCodeUsage } from "./opencode-usage.js";
 import { installEditorComposition } from "./editor-composition.js";
 import { homedir } from "os";
 import { join, dirname } from "path";
@@ -766,4 +767,6 @@ export default function (pi: ExtensionAPI) {
       "info"
     );
   });
+
+  registerOpenCodeUsage(pi);
 }

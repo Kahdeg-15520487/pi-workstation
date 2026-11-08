@@ -11,6 +11,7 @@ An extension for the [pi coding agent](https://github.com/earendil-works/pi) foc
 - **Custom compaction** — detailed 9-section summary via `session_before_compact`; opt-in microcompaction via `PI_AGENTIC_MICROCOMPACTION=1`.
 - **Editor composition** — border + status line with Ctrl-S stash / Ctrl-R restore / Ctrl-K clear shortcuts, plus `/stash-save` / `/stash-restore` / `/stash-clear` commands.
 - **`/welcome`** — toggle the welcome header banner.
+- **OpenCode Go usage + key rotation** — `/opencode-usage` shows quota windows and per-model spend; `/opencode-key` shows both `auth.json` subscriptions and rotates the active one. Auto-failover (default on) swaps to the standby key on 429/quota errors and switches back once the preferred key's quota recovers.
 - **`/init` / `/setup`** — write `quietStartup: true` to `~/.pi/agent/settings.json`.
 - **Bundled skills** (discovered via `resources_discover`): `agentic-brainstorming`, `agentic-karpathy`, `agentic-rob-pike`, `agentic-simplify`, `agentic-systematic-debugging`.
 - **Unhandled-rejection guard** — swallows benign stream/transport rejections that would otherwise crash pi.
@@ -34,10 +35,23 @@ pi install git:github.com/Kahdeg-15520487/pi-workstation
 /init                recommended settings (quietStartup)
 /welcome             toggle welcome banner
 /stash-save          stash editor buffer
+/opencode-usage      OpenCode Go quota + per-model spend (7d)
+/opencode-key        show both auth.json subscriptions
+/opencode-key rotate switch to the other subscription
+/opencode-key auto off   disable automatic failover/recovery
 /code-preview-*      (from the bundled pi-code-previews extension)
 ```
 
 The `todoread` / `todowrite` / `harness_*` tools are LLM-callable and drive the footer progress indicator.
+
+## OpenCode Go key rotation
+
+pi-ai reads only the credential's `key` field, so the rotation swaps `key` and `key2` in `~/.pi/agent/auth.json` (atomically, mode 0600) and records the result in `~/.pi/agent/opencode-key-rotation.json`. AuthStorage reloads on the auth.json revision change, so the next request uses the new subscription without a restart.
+
+- Manual: `/opencode-key rotate` (also resets the preferred subscription to the newly active one).
+- Automatic: on HTTP 429/402 or a quota/rate-limit assistant error while `opencode-go` is the current provider. When failed over, a throttled background probe (10 min, also on session start) checks `key2`; once every window is OK and rolling usage is below 90%, it swaps back.
+- Editing `auth.json` by hand (for example `/login opencode-go`) resets failover state; the new `key` is authoritative.
+- Rotation requires both `key` and `key2` to be present and different.
 
 ## Footer glyph settings
 

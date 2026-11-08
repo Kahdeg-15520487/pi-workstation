@@ -6,6 +6,7 @@ function loadHarness() {
   const api: any = {
     on: vi.fn(),
     registerTool: vi.fn(),
+    registerMessageRenderer: vi.fn(),
     registerCommand: vi.fn((name: string, definition: any) => {
       commands.set(name, definition);
     }),
