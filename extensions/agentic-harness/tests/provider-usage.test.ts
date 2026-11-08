@@ -10,6 +10,7 @@ import {
   UsageRateLimitError,
   bindingWindow,
   describeWindow,
+  fetchOpenCodeUsage,
   formatUsageLimit,
   parseCopilotQuota,
   parseRetryAfterMs,
@@ -396,5 +397,60 @@ describe("/provider command surface", () => {
 
   it("says so when there is no snapshot yet", () => {
     expect(buildUsageLines(undefined, 0).join("\n")).toContain("no snapshot yet");
+  });
+});
+
+describe("formatUsageLimit window labels", () => {
+  it("names the window so a bare percentage is not ambiguous", () => {
+    expect(formatUsageLimit([window({ shortLabel: "mo", remainingPercent: 47.4 })])).toBe("47% mo");
+  });
+
+  it("labels the binding window rather than the first one", () => {
+    const windows = [
+      window({ key: "rolling", label: "rolling", shortLabel: "roll", remainingPercent: 90 }),
+      window({ key: "weekly", label: "weekly", shortLabel: "wk", remainingPercent: 81 }),
+      window({ key: "monthly", label: "monthly", shortLabel: "mo", remainingPercent: 45 }),
+    ];
+    expect(formatUsageLimit(windows)).toBe("45% mo");
+  });
+
+  it("keeps a bare percentage when the provider gives no abbreviation", () => {
+    expect(formatUsageLimit([window({ remainingPercent: 47.4 })])).toBe("47%");
+  });
+});
+
+describe("fetchOpenCodeUsage", () => {
+  it("converts used-percent to remaining and tags every window", async () => {
+    const result = await fetchOpenCodeUsage({
+      resolveKey: async () => ({ key: "test-key", source: "auth.json" }),
+      fetchQuotaImpl: async () => [
+        { key: "rolling", label: "rolling", percent: 10 },
+        { key: "weekly", label: "weekly", percent: 20 },
+        { key: "monthly", label: "monthly", percent: 55, resetsAt: "2026-11-13T04:09:09.000Z" },
+      ],
+    });
+
+    expect(result.provider).toBe(PROVIDER_OPENCODE);
+    expect(result.windows.map((w) => [w.key, w.remainingPercent, w.shortLabel])).toEqual([
+      ["rolling", 90, "roll"],
+      ["weekly", 80, "wk"],
+      ["monthly", 45, "mo"],
+    ]);
+    expect(result.windows[2]?.resetsAt).toBe("2026-11-13T04:09:09.000Z");
+    expect(formatUsageLimit(result.windows)).toBe("45% mo");
+  });
+
+  it("keeps an unknown window key usable, just unlabelled", async () => {
+    const result = await fetchOpenCodeUsage({
+      resolveKey: async () => ({ key: "test-key", source: "auth.json" }),
+      fetchQuotaImpl: async () => [{ key: "daily", label: "daily", percent: 4 }],
+    });
+
+    expect(result.windows[0]?.shortLabel).toBeUndefined();
+    expect(formatUsageLimit(result.windows)).toBe("96%");
+  });
+
+  it("explains a missing credential instead of returning empty windows", async () => {
+    await expect(fetchOpenCodeUsage({ resolveKey: async () => undefined })).rejects.toThrow(/No opencode-go API key/);
   });
 });

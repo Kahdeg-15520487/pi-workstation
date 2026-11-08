@@ -48,8 +48,13 @@ export type UsageProviderId = typeof USAGE_PROVIDERS[number];
 export interface UsageWindow {
   /** Stable machine key ("rolling", "premium_interactions", ...). */
   key: string;
-  /** Short human label for narrow spaces ("5h", "wk", "mo", "premium"). */
+  /** Human label for prose ("rolling", "monthly", "premium"). */
   label: string;
+  /**
+   * Abbreviated label for the footer ("roll", "wk", "mo", "prem"). Without it
+   * a bare percentage says nothing about which window it belongs to.
+   */
+  shortLabel?: string;
   /** 0..100, REMAINING. 100 = untouched, 0 = exhausted. */
   remainingPercent: number;
   /** True when the provider reports the window as unmetered. */
@@ -118,6 +123,12 @@ const COPILOT_WINDOW_LABELS: Record<string, string> = {
   completions: "compl",
 };
 
+const COPILOT_WINDOW_SHORT: Record<string, string> = {
+  premium_interactions: "prem",
+  chat: "chat",
+  completions: "comp",
+};
+
 /**
  * Normalise the `copilot_internal/user` payload.
  *
@@ -163,6 +174,7 @@ export function parseCopilotQuota(payload: unknown): { windows: UsageWindow[]; p
     windows.push({
       key,
       label: COPILOT_WINDOW_LABELS[key] ?? key,
+      ...(COPILOT_WINDOW_SHORT[key] !== undefined ? { shortLabel: COPILOT_WINDOW_SHORT[key] } : {}),
       remainingPercent: clampPercent(remainingPercent),
       unlimited,
       ...(remaining !== undefined ? { remaining } : {}),
@@ -237,6 +249,13 @@ export function remainingFromUsed(percentUsed: number): number {
   return clampPercent(100 - percentUsed);
 }
 
+/** Abbreviations for the footer; OpenCode reports rolling/weekly/monthly. */
+const OPENCODE_WINDOW_SHORT: Record<string, string> = {
+  rolling: "roll",
+  weekly: "wk",
+  monthly: "mo",
+};
+
 export async function fetchOpenCodeUsage(options: OpenCodeUsageOptions = {}): Promise<ProviderUsage> {
   const now = options.now ?? Date.now;
   const resolveKey = options.resolveKey ?? (async () => {
@@ -250,13 +269,17 @@ export async function fetchOpenCodeUsage(options: OpenCodeUsageOptions = {}): Pr
     throw new Error(`No ${PROVIDER_OPENCODE} API key found — run /login ${PROVIDER_OPENCODE}.`);
   }
 
-  const windows = (await quota(resolved)).map((window) => ({
-    key: window.key,
-    label: window.label,
-    remainingPercent: remainingFromUsed(window.percent),
-    unlimited: false,
-    ...(window.resetsAt !== undefined ? { resetsAt: window.resetsAt } : {}),
-  }));
+  const windows = (await quota(resolved)).map((window) => {
+    const shortLabel = OPENCODE_WINDOW_SHORT[window.key];
+    return {
+      key: window.key,
+      label: window.label,
+      ...(shortLabel !== undefined ? { shortLabel } : {}),
+      remainingPercent: remainingFromUsed(window.percent),
+      unlimited: false,
+      ...(window.resetsAt !== undefined ? { resetsAt: window.resetsAt } : {}),
+    };
+  });
 
   return { provider: PROVIDER_OPENCODE, fetchedAt: now(), windows };
 }
@@ -276,12 +299,19 @@ export function bindingWindow(windows: readonly UsageWindow[]): UsageWindow | un
   );
 }
 
-/** Compact footer text for the binding window: "63%" / "unlimited" / "—". */
+/**
+ * Compact footer text for the binding window: "63% prem" / "unlimited" / "—".
+ *
+ * The window label is part of the text on purpose. The footer shows whichever
+ * window has the least left, so a bare "45%" reads as "45% of what?" — for
+ * OpenCode that was the monthly bucket while rolling still sat at 90%.
+ */
 export function formatUsageLimit(windows: readonly UsageWindow[]): string {
   const binding = bindingWindow(windows);
   if (!binding) return "—";
   if (binding.unlimited) return "unlimited";
-  return `${Math.round(binding.remainingPercent)}%`;
+  const percent = `${Math.round(binding.remainingPercent)}%`;
+  return binding.shortLabel ? `${percent} ${binding.shortLabel}` : percent;
 }
 
 /** Longer form for /provider output: "premium 63% (31929/50000, resets 2026-12-01)". */

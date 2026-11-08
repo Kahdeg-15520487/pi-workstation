@@ -89,9 +89,23 @@ Segment ids: `logo`, `path`, `git`, `model`, `context`, `cache`, `provider`,
 `goal`, `statuses`, `tools`. Env entries merge over settings.json rather than
 replacing it.
 
-The `provider` segment renders `provider · model · <remaining quota>` right of
-the cache rate. It disappears on its own when the active model's provider has no
-usage source, and shows `—` until the first reading arrives.
+The `provider` segment renders `provider · model · <remaining%> <window>` right
+of the cache rate:
+
+```
+opencode · claude-sonnet-4 · 45% mo        monthly window, 45% left
+copilot  · Claude Sonnet 4.5 · 64% prem    premium interactions, 64% left
+```
+
+The window suffix is not decoration. Subscription plans meter several buckets at
+once (OpenCode: rolling / weekly / monthly; Copilot: premium interactions, chat,
+completions), so the segment reports the **binding window** — the metered one
+with the least left — and names it. Abbreviations: `roll`, `wk`, `mo` for
+OpenCode; `prem`, `chat`, `comp` for Copilot; `unlimited` when the binding bucket
+is unmetered and `—` before the first reading. `/provider <name>` lists every
+window separately.
+
+It disappears on its own when the active model's provider has no usage source.
 
 ## Usage refresh policy
 
