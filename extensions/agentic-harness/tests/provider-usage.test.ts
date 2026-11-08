@@ -157,12 +157,12 @@ describe("binding window", () => {
   });
 
   it("reports unlimited when nothing is metered", () => {
-    expect(formatUsageLimit([window({ unlimited: true })])).toBe("unlimited");
+    expect(formatUsageLimit([window({ unlimited: true })])).toBe("5h ∞");
     expect(bindingWindow([window({ unlimited: true })])?.unlimited).toBe(true);
   });
 
   it("renders a rounded percentage and an em dash for nothing known", () => {
-    expect(formatUsageLimit([window({ remainingPercent: 47.4 })])).toBe("47%");
+    expect(formatUsageLimit([window({ remainingPercent: 47.4 })])).toBe("5h 47%");
     expect(formatUsageLimit([])).toBe("—");
   });
 
@@ -401,21 +401,29 @@ describe("/provider command surface", () => {
 });
 
 describe("formatUsageLimit window labels", () => {
-  it("names the window so a bare percentage is not ambiguous", () => {
-    expect(formatUsageLimit([window({ shortLabel: "mo", remainingPercent: 47.4 })])).toBe("47% mo");
+  it("names the window so a percentage is never ambiguous", () => {
+    expect(formatUsageLimit([window({ shortLabel: "mo", remainingPercent: 47.4 })])).toBe("mo 47%");
   });
 
-  it("labels the binding window rather than the first one", () => {
+  it("lists every window, not just the tightest one", () => {
     const windows = [
       window({ key: "rolling", label: "rolling", shortLabel: "roll", remainingPercent: 90 }),
       window({ key: "weekly", label: "weekly", shortLabel: "wk", remainingPercent: 81 }),
       window({ key: "monthly", label: "monthly", shortLabel: "mo", remainingPercent: 45 }),
     ];
-    expect(formatUsageLimit(windows)).toBe("45% mo");
+    expect(formatUsageLimit(windows)).toBe("roll 90% · wk 81% · mo 45%");
   });
 
-  it("keeps a bare percentage when the provider gives no abbreviation", () => {
-    expect(formatUsageLimit([window({ remainingPercent: 47.4 })])).toBe("47%");
+  it("marks unlimited buckets instead of implying they are about to run out", () => {
+    const windows = [
+      window({ key: "premium_interactions", shortLabel: "prem", remainingPercent: 64 }),
+      window({ key: "chat", shortLabel: "chat", unlimited: true }),
+    ];
+    expect(formatUsageLimit(windows)).toBe("prem 64% · chat ∞");
+  });
+
+  it("falls back to the long label when no abbreviation exists", () => {
+    expect(formatUsageLimit([window({ label: "daily", remainingPercent: 47.4 })])).toBe("daily 47%");
   });
 });
 
@@ -437,7 +445,7 @@ describe("fetchOpenCodeUsage", () => {
       ["monthly", 45, "mo"],
     ]);
     expect(result.windows[2]?.resetsAt).toBe("2026-11-13T04:09:09.000Z");
-    expect(formatUsageLimit(result.windows)).toBe("45% mo");
+    expect(formatUsageLimit(result.windows)).toBe("roll 90% · wk 80% · mo 45%");
   });
 
   it("keeps an unknown window key usable, just unlabelled", async () => {
@@ -447,7 +455,7 @@ describe("fetchOpenCodeUsage", () => {
     });
 
     expect(result.windows[0]?.shortLabel).toBeUndefined();
-    expect(formatUsageLimit(result.windows)).toBe("96%");
+    expect(formatUsageLimit(result.windows)).toBe("daily 96%");
   });
 
   it("explains a missing credential instead of returning empty windows", async () => {

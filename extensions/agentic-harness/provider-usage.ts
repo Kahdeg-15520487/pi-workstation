@@ -300,18 +300,25 @@ export function bindingWindow(windows: readonly UsageWindow[]): UsageWindow | un
 }
 
 /**
- * Compact footer text for the binding window: "63% prem" / "unlimited" / "—".
+ * Compact footer text covering EVERY window: "roll 100% · wk 80% · mo 44%".
  *
- * The window label is part of the text on purpose. The footer shows whichever
- * window has the least left, so a bare "45%" reads as "45% of what?" — for
- * OpenCode that was the monthly bucket while rolling still sat at 90%.
+ * Reporting only the binding window reads as "44% of what?" — a plan meters
+ * several buckets at once, and which one is tightest changes as time passes
+ * (OpenCode's rolling bucket recovers hourly while monthly barely moves). The
+ * label travels with the number so each value is self-describing, and the
+ * segment stays honest when the binding bucket flips.
+ *
+ * Unlimited buckets print "∞" rather than a percentage, because "chat 100%"
+ * would imply a limit that is about to run out.
  */
 export function formatUsageLimit(windows: readonly UsageWindow[]): string {
-  const binding = bindingWindow(windows);
-  if (!binding) return "—";
-  if (binding.unlimited) return "unlimited";
-  const percent = `${Math.round(binding.remainingPercent)}%`;
-  return binding.shortLabel ? `${percent} ${binding.shortLabel}` : percent;
+  if (windows.length === 0) return "—";
+  return windows
+    .map((window) => {
+      const name = window.shortLabel ?? window.label;
+      return window.unlimited ? `${name} ∞` : `${name} ${Math.round(window.remainingPercent)}%`;
+    })
+    .join(" · ");
 }
 
 /** Longer form for /provider output: "premium 63% (31929/50000, resets 2026-12-01)". */

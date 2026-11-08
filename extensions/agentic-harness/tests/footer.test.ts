@@ -464,13 +464,13 @@ describe("provider segment", () => {
     );
   }
 
-  it("renders provider, model and remaining limit together", () => {
+  it("renders the provider with its window list", () => {
     const rendered = providerFooter({
       provider: "opencode-go",
       limit: { text: "47%", remainingPercent: 47 },
     }).render(200).join("\n");
 
-    expect(rendered).toContain("opencode · test-model · 47%");
+    expect(rendered).toContain("opencode · 47%");
   });
 
   it("shortens github-copilot", () => {
@@ -479,17 +479,17 @@ describe("provider segment", () => {
       limit: { text: "63%", remainingPercent: 63 },
     }).render(200).join("\n");
 
-    expect(rendered).toContain("copilot · test-model · 63%");
+    expect(rendered).toContain("copilot · 63%");
   });
 
   it("shows an em dash before the first snapshot arrives", () => {
     const rendered = providerFooter({ provider: "opencode-go" }).render(200).join("\n");
-    expect(rendered).toContain("opencode · test-model · —");
+    expect(rendered).toContain("opencode · —");
   });
 
   it("omits the segment entirely when the provider is unknown", () => {
     const rendered = providerFooter({ limit: { text: "47%", remainingPercent: 47 } }).render(200).join("\n");
-    expect(rendered).not.toContain("test-model · 47%");
+    expect(rendered).not.toContain("opencode");
   });
 
   it("can be switched off through segmentVisibility", () => {
@@ -503,8 +503,8 @@ describe("provider segment", () => {
       visibility: { provider: false },
     });
 
-    expect(visible.render(200).join("\n")).toContain("opencode · test-model · 47%");
-    expect(hidden.render(200).join("\n")).not.toContain("opencode · test-model · 47%");
+    expect(visible.render(200).join("\n")).toContain("opencode · 47%");
+    expect(hidden.render(200).join("\n")).not.toContain("opencode");
   });
 
   it("colours the block by how much quota is left", () => {
@@ -515,9 +515,9 @@ describe("provider segment", () => {
         provider: "opencode-go",
         limit: { text: `${remainingPercent}%`, remainingPercent },
       }).render(200).join("\n");
-      if (/\x1b\[48;2;120;55;55m[^\x1b]*opencode · test-model/.test(rendered)) return "error";
-      if (/\x1b\[48;2;110;85;45m[^\x1b]*opencode · test-model/.test(rendered)) return "warning";
-      if (/\x1b\[48;2;65;95;75m[^\x1b]*opencode · test-model/.test(rendered)) return "success";
+      if (/\x1b\[48;2;120;55;55m[^\x1b]*opencode/.test(rendered)) return "error";
+      if (/\x1b\[48;2;110;85;45m[^\x1b]*opencode/.test(rendered)) return "warning";
+      if (/\x1b\[48;2;65;95;75m[^\x1b]*opencode/.test(rendered)) return "success";
       return "provider";
     };
 
@@ -528,7 +528,7 @@ describe("provider segment", () => {
 
   it("uses the neutral colour while the limit is unknown", () => {
     const rendered = providerFooter({ provider: "opencode-go" }).render(200).join("\n");
-    expect(rendered).toMatch(/\x1b\[48;2;75;85;95m[^\x1b]*opencode · test-model/);
+    expect(rendered).toMatch(/\x1b\[48;2;75;85;95m[^\x1b]*opencode/);
   });
 
   it("rides along in the compact preset", () => {
@@ -538,7 +538,7 @@ describe("provider segment", () => {
       preset: "compact",
     }).render(250).join("\n");
 
-    expect(rendered).toContain("opencode · test-model · 47%");
+    expect(rendered).toContain("opencode · 47%");
   });
 
   it("stays out of the minimal preset", () => {
@@ -548,6 +548,6 @@ describe("provider segment", () => {
       preset: "minimal",
     }).render(250).join("\n");
 
-    expect(rendered).not.toContain("opencode · test-model · 47%");
+    expect(rendered).not.toContain("opencode");
   });
 });

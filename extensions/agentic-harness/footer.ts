@@ -416,7 +416,10 @@ export class WorkstationFooter implements Component {
         remaining < 40 ? "warning" : "success";
       segs.set("provider", {
         id: "provider",
-        text: `${shortProviderName(providerName)} · ${modelName} · ${usage?.text ?? "—"}`,
+        // No model name: the quota is per account, not per model, and the
+        // footer already has a dedicated `model` segment. Dropping it leaves
+        // room for every metered window.
+        text: `${shortProviderName(providerName)} · ${usage?.text ?? "—"}`,
         icon: icons.provider,
         color: providerColor,
         priority: 6,

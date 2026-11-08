@@ -89,21 +89,25 @@ Segment ids: `logo`, `path`, `git`, `model`, `context`, `cache`, `provider`,
 `goal`, `statuses`, `tools`. Env entries merge over settings.json rather than
 replacing it.
 
-The `provider` segment renders `provider · model · <remaining%> <window>` right
-of the cache rate:
+The `provider` segment lists **every** metered bucket, right of the cache rate:
 
 ```
-opencode · claude-sonnet-4 · 45% mo        monthly window, 45% left
-copilot  · Claude Sonnet 4.5 · 64% prem    premium interactions, 64% left
+opencode · roll 100% · wk 80% · mo 44%
+copilot  · prem 64% · chat ∞ · comp ∞
 ```
 
-The window suffix is not decoration. Subscription plans meter several buckets at
-once (OpenCode: rolling / weekly / monthly; Copilot: premium interactions, chat,
-completions), so the segment reports the **binding window** — the metered one
-with the least left — and names it. Abbreviations: `roll`, `wk`, `mo` for
-OpenCode; `prem`, `chat`, `comp` for Copilot; `unlimited` when the binding bucket
-is unmetered and `—` before the first reading. `/provider <name>` lists every
-window separately.
+Each number carries its own window label, because a plan meters several buckets
+at once and which one is tightest changes over time — OpenCode's rolling bucket
+recovers within hours while monthly barely moves, so a single figure silently
+changes meaning. Abbreviations: `roll`, `wk`, `mo` for OpenCode; `prem`, `chat`,
+`comp` for Copilot. Unlimited buckets print `∞` rather than a percentage, since
+"chat 100%" would imply a limit about to run out. Before the first reading the
+segment shows `—`.
+
+No model name: the quota belongs to the account, not the model, and the footer
+already has a dedicated `model` segment. Dropping it buys the width for all
+three windows. `/provider <name>` shows the same data with reset times and
+absolute units.
 
 It disappears on its own when the active model's provider has no usage source.
 
