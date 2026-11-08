@@ -4,7 +4,7 @@ import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent
 import { basename } from "path";
 import { PLAN_PROGRESS_SPINNER_MS } from "./harness-progress.js";
 import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";
-import { getCurrentTodos, subscribeOnChange, getTodoMarker, type SimpleTodoItem } from "./simple-todo.js";
+import { getCurrentTodos, subscribeOnChange } from "./simple-todo.js";
 import { shimmerText, type ShimmerPalette } from "./shimmer.js";
 
 // Types
@@ -295,47 +295,6 @@ export class WorkstationFooter implements Component {
     } else if (!has && this.spinnerTimer) {
       clearInterval(this.spinnerTimer); this.spinnerTimer = null;
     }
-  }
-
-  private renderSimpleTodos(width: number): string[] {
-    const todos = getCurrentTodos();
-    if (todos.length === 0) return [];
-
-    const t = this.theme;
-    const lines: string[] = [];
-    const pw = Math.max(0, width - 4);
-    const done = todos.filter((t) => t.status === "completed").length;
-    const inProgress = todos.find((t) => t.status === "in_progress");
-
-    // Header with progress
-    const header = `Todo ${done}/${todos.length}`;
-    lines.push(fitLine(`  ${t.fg("accent", t.bold(header))}`, width));
-
-    // Show in_progress item first (most important), then others (completed + pending)
-    const maxItems = 5;
-    const shown: SimpleTodoItem[] = [];
-    if (inProgress) shown.push(inProgress);
-    for (const todo of todos) {
-      if (shown.length >= maxItems) break;
-      if (todo === inProgress) continue;
-      shown.push(todo);
-    }
-
-    for (const todo of shown) {
-      const marker = getTodoMarker(todo.status);
-      const color: Parameters<Theme["fg"]>[0] =
-        todo.status === "in_progress" ? "warning" :
-        todo.status === "completed" ? "success" : "dim";
-      const text = truncateToWidth(todo.content, Math.max(0, pw - 4));
-      lines.push(fitLine(`    ${t.fg(color, marker)} ${t.fg("dim", text)}`, width));
-    }
-
-    const remaining = todos.filter((t) => !shown.includes(t)).length;
-    if (remaining > 0) {
-      lines.push(fitLine(`    ${t.fg("dim", `... +${remaining} more`)}`, width));
-    }
-
-    return lines;
   }
 
   render(width: number): string[] {

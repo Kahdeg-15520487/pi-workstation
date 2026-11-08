@@ -1,15 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { ICONS, ICONS_PLAIN, WorkstationFooter, setUseNerdIcons } from "../footer.js";
-import { setCurrentTodos, type SimpleTodoItem } from "../simple-todo.js";
 import type { FooterGlyphMode } from "../ui-settings.js";
 
 setUseNerdIcons(false);
-
-afterEach(() => {
-  setCurrentTodos([]);
-});
 
 const stubTheme = {
   fg: (_color: string, text: string) => text,
@@ -114,9 +109,11 @@ describe("WorkstationFooter Powerline styling", () => {
 
     const rendered = footer.render(100).join("\n");
 
-    expect(rendered).toContain("\x1b[48;2;0;175;175m");
-    expect(rendered).toContain("\x1b[48;2;215;135;175m");
-    expect(rendered).toContain("\x1b[48;2;200;150;50m");
+    // Assert the mechanism (solid truecolour background blocks), not specific
+    // RGB constants. The palette is a design choice and has already been
+    // recoloured once, which is exactly what made hard-coded literals go stale.
+    const backgrounds = new Set(rendered.match(/\x1b\[48;2;\d+;\d+;\d+m/g) ?? []);
+    expect(backgrounds.size).toBeGreaterThanOrEqual(3);
     expect(rendered).not.toContain("|");
     expect(rendered).not.toContain("");
   });
@@ -249,27 +246,6 @@ describe("WorkstationFooter status bridge", () => {
     expectAllLinesFit(lines, 150);
   });
 
-  it("renders senpi-style simple todo progress in footer", () => {
-    // Set up todos via simple-todo state
-    const todos: SimpleTodoItem[] = [
-      { content: "Implement login page", status: "completed", priority: "high" },
-      { content: "Add unit tests for login", status: "in_progress", priority: "high" },
-      { content: "Deploy to staging", status: "pending", priority: "medium" },
-    ];
-    setCurrentTodos(todos);
-
-    const footer = createFooter();
-    const rendered = footer.render(120).join("\n");
-
-    expect(rendered).toContain("Todo 1/3");
-    expect(rendered).toContain("Implement login page");
-    expect(rendered).toContain("Add unit tests for login");
-    expect(rendered).toContain("Deploy to staging");
-
-    // Clean up
-    setCurrentTodos([]);
-  });
-
   it("omits the goal segment when no active goal summary exists", () => {
     const rendered = createFooter().render(150).join("\n");
 
@@ -307,29 +283,6 @@ describe("WorkstationFooter status bridge", () => {
     ).render(150).join("\n");
 
     expect(rendered).toContain("verify:fail");
-  });
-
-  it("keeps todo panel rendering independently when goal summary is present", () => {
-    const todos: SimpleTodoItem[] = [
-      { content: "Keep todo visible", status: "in_progress", priority: "high" },
-      { content: "Keep pending visible", status: "pending", priority: "medium" },
-    ];
-    setCurrentTodos(todos);
-
-    const rendered = createFooter(
-      new Map(),
-      "default",
-      { ahead: 0, behind: 0, dirty: 0, untracked: 0 },
-      "high",
-      { name: "test-model", isLatest: false },
-      "plain",
-      "goal-1 | verify:pending | subgoals:1/2 | Active goal",
-    ).render(140).join("\n");
-
-    expect(rendered).toContain("Todo 0/2");
-    expect(rendered).toContain("Keep todo visible");
-    expect(rendered).toContain("goal-1");
-    expect(rendered).toContain("verify:pending");
   });
 
   it("renders multiple extension statuses in stable key order", () => {

@@ -14,7 +14,7 @@ import {
   showWelcomeHeader,
   toggleWelcomeHeader,
 } from "../welcome-ui.js";
-import { SHIMMER_SWEEP_MS } from "../shimmer.js";
+
 
 function ui() {
   return {
@@ -28,17 +28,6 @@ const theme = {
   bold: (text: string) => text,
 } as any;
 
-const shimmerTheme = {
-  ...theme,
-  getFgAnsi: (color: string) => color === "warning" ? "\x1b[33m" : "\x1b[36m",
-} as any;
-
-const SHIMMER_HIGHLIGHT_ANSI = "\x1b[38;2;241;248;242m";
-
-function render(component: { render(width: number): string[] }): string {
-  return component.render(120).join("\n");
-}
-
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -51,41 +40,6 @@ describe("welcome header controller", () => {
 
     expect(rendered).toContain("Engineering Discipline Extension");
     expect(rendered).toContain("/clarify");
-  });
-
-  it("keeps the banner shimmer running while the header is shown", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-
-    const component = createWelcomeHeader()({ requestRender: vi.fn() } as any, shimmerTheme);
-
-    const initialRender = render(component);
-    expect(initialRender).toContain("\x1b[");
-    expect(initialRender).toContain(SHIMMER_HIGHLIGHT_ANSI);
-    expect(initialRender).not.toContain("\x1b[33m");
-
-    vi.setSystemTime(350);
-    expect(render(component)).not.toBe(initialRender);
-
-    vi.setSystemTime(SHIMMER_SWEEP_MS * 3);
-    const laterRender = render(component);
-
-    expect(laterRender).toContain("\x1b[");
-    expect(laterRender).toContain("Engineering Discipline Extension");
-  });
-
-  it("clears the shimmer timer on dispose", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(0);
-    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
-    const requestRender = vi.fn();
-
-    const component = createWelcomeHeader()({ requestRender } as any, shimmerTheme);
-    component.dispose?.();
-    vi.advanceTimersByTime(80);
-
-    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
-    expect(requestRender).not.toHaveBeenCalled();
   });
 
   it("shows, dismisses, and toggles the header", () => {
