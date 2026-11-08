@@ -3,10 +3,10 @@
  *
  * Two commands:
  *
- *   /opencode-usage [24h|7d|30d|all] [full]
+ *   /provider opencode usage [24h|7d|30d|all] [full]
  *     Quota windows plus per-model spend for the active OpenCode Go key.
  *
- *   /opencode-key [rotate|use key|use key2|auto on|auto off]
+ *   /provider opencode key [rotate|use key|use key2|auto on|auto off]
  *     Inspect both auth.json subscriptions and rotate the active one.
  *
  * Two different APIs back the usage panel:
@@ -39,12 +39,12 @@
  * sits in `key`; after a failover it is preserved in `key2` until recovery.
  *
  * Usage:
- *   /opencode-usage             quota + top models by cost over the last 7 days
- *   /opencode-usage 24h|7d|30d|all
- *   /opencode-usage 7d full     list every model instead of the top 5
- *   /opencode-key               show both subscriptions and their quota
- *   /opencode-key rotate        switch to the other subscription
- *   /opencode-key auto off      disable automatic failover/recovery
+ *   /provider opencode usage             quota + top models, last 7 days
+ *   /provider opencode usage 24h|7d|30d|all
+ *   /provider opencode usage 7d full     every model, not just the top 5
+ *   /provider opencode key               both subscriptions and their quota
+ *   /provider opencode key rotate        switch to the other subscription
+ *   /provider opencode key auto off      disable automatic failover/recovery
  *
  * Reload with /reload after editing this file.
  */
@@ -739,7 +739,7 @@ export function buildSpendLines(spend: SpendSnapshot): Line[] {
 	if (spend.omitted > 0) {
 		lines.push([
 			{ text: `  … ${spend.omitted} more · `, style: "dim" },
-			{ text: `/opencode-usage ${spend.range} full`, style: "dim" },
+			{ text: `/provider opencode usage ${spend.range} full`, style: "dim" },
 		]);
 	}
 
@@ -834,7 +834,7 @@ export function buildKeyPanel(snapshot: KeyPanelSnapshot): Line[] {
 
 	lines.push([]);
 	lines.push([
-		{ text: "  /opencode-key rotate · use key|key2 · auto on|off", style: "dim" },
+		{ text: "  /provider opencode key rotate · use key|key2 · auto on|off", style: "dim" },
 	]);
 	return lines;
 }
@@ -910,7 +910,7 @@ export function parseKeyArgs(args: string): KeyCommand {
 		if (tokens[1] === "off" || tokens[1] === "disable" || tokens[1] === "false") {
 			return { action: "auto", enabled: false };
 		}
-		return { action: "error", message: "Use `/opencode-key auto on` or `/opencode-key auto off`." };
+		return { action: "error", message: "Use `/provider opencode key auto on` or `/provider opencode key auto off`." };
 	}
 
 	return {
@@ -1061,25 +1061,10 @@ export async function collectKeyPanel(paths: OpenCodePaths): Promise<KeyPanelSna
 
 // --- Extension ------------------------------------------------------------
 
-const usageCompletions = (prefix: string) => {
-	const token = prefix.trim().toLowerCase();
-	// A second word is already a choice; offer completions only for the first.
-	if (token.length === 0 || /\s/.test(token)) return null;
-	const matches = [...RANGES, "full"].filter((option) => option.startsWith(token));
-	return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
-};
-
-const keyCompletions = (prefix: string) => {
-	const token = prefix.trim().toLowerCase();
-	const options = ["status", "rotate", "auto", "on", "off"];
-	const matches = options.filter((option) => option.startsWith(token) && option !== token);
-	return matches.length > 0 ? matches.map((value) => ({ value, label: value })) : null;
-};
-
 /**
  * Show the OpenCode Go quota/spend panel.
- * Exported so /provider dispatches to the same implementation as the legacy
- * /opencode-usage alias instead of duplicating it.
+ * Exported because /provider is the only command surface: it dispatches here
+ * rather than reimplementing the API.
  */
 export async function runOpenCodeUsage(pi: ExtensionAPI, args: string, ctx: ExtensionContext): Promise<void> {
 			const parsed = parseUsageArgs(args);
@@ -1176,7 +1161,7 @@ export async function runOpenCodeKeys(pi: ExtensionAPI, args: string, ctx: Exten
 			});
 }
 
-export function registerOpenCodeUsage(pi: ExtensionAPI): void {
+export function registerOpenCodeSupport(pi: ExtensionAPI): void {
 	pi.registerMessageRenderer<UsageSnapshot>(USAGE_CUSTOM_TYPE, (message, { outputPad }, theme) => {
 		const snapshot = message.details;
 		const box = new Box(outputPad, 1, (text) => theme.bg("customMessageBg", text));
@@ -1201,18 +1186,6 @@ export function registerOpenCodeUsage(pi: ExtensionAPI): void {
 			box.addChild(new Text(line.length === 0 ? "" : paint(line, theme), 0, 0));
 		}
 		return box;
-	});
-
-	pi.registerCommand("opencode-usage", {
-		description: "Show the OpenCode Go quota and per-model spend",
-		getArgumentCompletions: usageCompletions,
-		handler: (args, ctx) => runOpenCodeUsage(pi, args, ctx),
-	});
-
-	pi.registerCommand("opencode-key", {
-		description: "Show or rotate the OpenCode Go auth.json subscriptions",
-		getArgumentCompletions: keyCompletions,
-		handler: (args, ctx) => runOpenCodeKeys(pi, args, ctx),
 	});
 
 	// Recovery probes run in the background so they never delay a turn.

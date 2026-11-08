@@ -9,9 +9,9 @@
  *   /provider <provider> key <v>   rotate | use key|key2 | auto on|off | status
  *
  * Provider-specific verbs are delegated rather than reimplemented:
- * `/provider opencode usage` forwards to runOpenCodeUsage and
- * `/provider opencode key rotate` to runOpenCodeKeys, so the legacy
- * /opencode-usage and /opencode-key commands cannot drift from this one.
+ * the `usage` verb forwards to runOpenCodeUsage and `key` to runOpenCodeKeys.
+ * Those live in opencode-usage.ts and are the only implementation of the
+ * OpenCode endpoints; /provider is the only command surface that calls them.
  *
  * Usage reads go through the shared UsageCache, so opening the panel does not
  * add a second request when the footer already refreshed that provider.
@@ -198,7 +198,7 @@ export async function runProviderCommand(pi: ExtensionAPI, args: string, ctx: Ex
       ctx.ui.notify(`${provider} has no switchable keys — that is opencode-go only.`, "error");
       return;
     }
-    // Delegate so /provider and /opencode-key share one implementation.
+    // Delegate: one implementation, reached only through /provider.
     await runOpenCodeKeys(pi, [verb === "key" ? "" : "status", ...params].join(" ").trim(), ctx);
     return;
   }

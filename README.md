@@ -30,7 +30,6 @@ Extension suite for the [pi coding agent](https://github.com/earendil-works/pi):
 | `/stash-save`, `/stash-restore`, `/stash-clear` | Save/restore/clear editor buffer (keys: Ctrl-S/R/K) |
 | `/memory list\|show\|save\|delete\|search\|stats` | Manage workspace memories |
 | `/provider [<provider>] [<verb>] [params]` | Unified usage: `opencode` (quota + spend + keys) and `copilot` (premium quota) |
-| `/opencode-usage`, `/opencode-key` | Legacy aliases, same implementation as `/provider` |
 | `/code-preview-health`, `/code-preview-settings` | Preview renderer status and settings |
 
 ## Configuration

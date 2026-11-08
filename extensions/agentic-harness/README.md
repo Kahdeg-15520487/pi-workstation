@@ -43,8 +43,8 @@ pi install git:github.com/Kahdeg-15520487/pi-workstation
 /provider opencode key auto off  disable automatic failover/recovery
 
 `<p>` accepts `opencode|opencode-go|oc|go` and `copilot|github-copilot|gh|github`.
-The legacy `/opencode-usage` and `/opencode-key` commands still work and share
-the same implementation.
+`/provider` is the only command surface; the old `/opencode-usage` and
+`/opencode-key` names are gone, not aliased.
 /code-preview-*      (from the bundled pi-code-previews extension)
 ```
 
@@ -54,7 +54,7 @@ The `todoread` / `todowrite` / `harness_*` tools are LLM-callable and drive the 
 
 pi-ai reads only the credential's `key` field, so the rotation swaps `key` and `key2` in `~/.pi/agent/auth.json` (atomically, mode 0600) and records the result in `~/.pi/agent/opencode-key-rotation.json`. AuthStorage reloads on the auth.json revision change, so the next request uses the new subscription without a restart.
 
-- Manual: `/opencode-key rotate` (also resets the preferred subscription to the newly active one).
+- Manual: `/provider opencode key rotate` (also resets the preferred subscription to the newly active one).
 - Automatic: on HTTP 429/402 or a quota/rate-limit assistant error while `opencode-go` is the current provider. When failed over, a throttled background probe (10 min, also on session start) checks `key2`; once every window is OK and rolling usage is below 90%, it swaps back.
 - Editing `auth.json` by hand (for example `/login opencode-go`) resets failover state; the new `key` is authoritative.
 - Rotation requires both `key` and `key2` to be present and different.
